@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import './NotFound.css';
+import './Notfound.css';
 
 /* ─── Canvas Particle Field (same as About) ─── */
 function ParticleField() {
