@@ -23,7 +23,7 @@ import SimilarPage from './pages/SimilarPage';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import CommunityGuidelines from './pages/CommunityGuidelines';
-import NotFound from './pages/NotFound';
+import NotFound from './pages/Notfound';
 import Confetti from './components/Confetti';
 import { SnowEffect } from './components/Effects';
 import './index.css';
