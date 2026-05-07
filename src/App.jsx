@@ -23,6 +23,7 @@ import SimilarPage from './pages/SimilarPage';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import CommunityGuidelines from './pages/CommunityGuidelines';
+import NotFound from './pages/NotFound';
 import Confetti from './components/Confetti';
 import { SnowEffect } from './components/Effects';
 import './index.css';
@@ -90,7 +91,7 @@ function AppInner() {
           <Route path="/studio/:studioId"  element={<StudioPageRoute/>}/>
           <Route path="/list/:listId"   element={<PublicListPage/>}/>
           <Route path="/similar/:type/:id" element={<SimilarPage/>}/>
-          <Route path="*"              element={<Navigate to="/home" replace/>}/>
+          <Route path="*"              element={<NotFound/>}/>
         </Routes>
       </div>
       <BottomNav active={activeTab} onChange={handleTabChange}/>
