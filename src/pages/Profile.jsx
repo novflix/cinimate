@@ -328,7 +328,7 @@ function ListEditPage({ listId, customLists, createCustomList, updateListMeta, o
           updated_at: new Date().toISOString(),
           is_public: true,
           is_site_list: effectiveSiteList,
-          author_name: effectiveSiteList ? 'CinΗmate' : undefined,
+          author_name: effectiveSiteList ? 'CiniMate' : undefined,
         }, { onConflict: 'id' });
       } else if (id) {
         await supabase.from('public_lists').delete().eq('id', id);

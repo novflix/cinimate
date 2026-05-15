@@ -252,73 +252,78 @@
 }
 /* ─── Popular Lists grid (admin view) ─────────────────────────────────────── */
 .popular-lists-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px 16px 32px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  padding: 14px 12px 32px;
 }
 .pop-list-card {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
+  flex-direction: column;
   border-radius: 14px;
   background: var(--surface);
   border: 1px solid var(--border);
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  overflow: hidden;
+  transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
 }
 .pop-list-card:hover {
-  background: var(--surface2, rgba(255,255,255,0.06));
-  border-color: rgba(232,197,71,0.25);
+  transform: translateY(-2px);
+  border-color: rgba(232,197,71,0.35);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
 }
+.pop-list-card:active { transform: scale(0.97); }
+
+/* square cover — 2×2 poster grid */
 .pop-list-card__cover {
-  width: 60px;
-  height: 60px;
-  border-radius: 10px;
-  overflow: hidden;
-  flex-shrink: 0;
+  width: 100%;
+  aspect-ratio: 1 / 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
   background: var(--surface2, rgba(255,255,255,0.05));
+  overflow: hidden;
+  flex-shrink: 0;
 }
-.pop-list-card__cover--single { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+.pop-list-card__cover--single {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
 .pop-list-card__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pop-list-card__cover--empty {
-  width: 60px; height: 60px;
   display: flex; align-items: center; justify-content: center;
   color: var(--text3);
   grid-column: 1 / -1; grid-row: 1 / -1;
 }
+
 .pop-list-card__info {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 3px;
+  padding: 8px 8px 10px;
 }
 .pop-list-card__name {
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--text1, var(--text));
-  white-space: nowrap;
+  line-height: 1.3;
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 .pop-list-card__meta {
-  font-size: 12px;
+  font-size: 10px;
   color: var(--text3);
-}
-.pop-list-card__likes { color: #e05c6a; }
-.pop-list-card__desc {
-  font-size: 12px;
-  color: var(--text2);
+  line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 1px;
 }
+.pop-list-card__likes { color: #e05c6a; }
+.pop-list-card__desc { display: none; }
 /* ─── Popular Lists sub-sections ─────────────────────────── */
 .popular-lists-wrap { padding-bottom: 24px; }
 

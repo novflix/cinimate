@@ -266,10 +266,10 @@ function PopularListsContent({ lang }) {
       <div key={list.id} className="pop-list-card" onClick={() => navigate(`/list/${list.id}`)}>
         <div className={`pop-list-card__cover${posters.length === 1 ? ' pop-list-card__cover--single' : ''}`}>
           {list.image
-            ? <img src={list.image} alt=""/>
+            ? <img src={list.image} alt="" style={{gridColumn:'1/-1'}}/>
             : posters.length > 0
               ? posters.map((url, i) => <img key={i} src={url} alt=""/>)
-              : <div className="pop-list-card__cover--empty"><ListLinear size={24} strokeWidth={1}/></div>
+              : <div className="pop-list-card__cover--empty"><ListLinear size={28} strokeWidth={1}/></div>
           }
         </div>
         <div className="pop-list-card__info">

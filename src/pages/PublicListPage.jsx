@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ListLinear, AltArrowLeftLinear, HeartAngleLinear } from 'solar-icon-set';
+import { ListLinear, AltArrowLeftLinear, HeartAngleLinear, EyeLinear, EyeClosedLinear, BookmarkLinear, BookmarkOpenedLinear } from 'solar-icon-set';
 import { useStore } from '../store';
 import { useAuth } from '../auth';
 import { useLocalizedMovies } from '../useLocalizedMovies';
@@ -26,7 +26,9 @@ export default function PublicListPage() {
   const [copyLoading, setCopyLoading] = useState(false);
   const [copyLabel, setCopyLabel] = useState(null); // null | 'copied' | 'exists' | 'error'
 
-  const { createCustomList, deleteCustomList, customLists, promoteCustomListOwnership } = useStore();
+  const { createCustomList, deleteCustomList, customLists, promoteCustomListOwnership,
+          isWatched, isInWatchlist, addToWatched, addToWatchlist,
+          removeFromWatched, removeFromWatchlist } = useStore();
   const { user } = useAuth();
   const [lang] = useState(() => { try { return localStorage.getItem('lang') || 'en'; } catch { return 'en'; } });
   const listItems = list?.items || [];
@@ -228,6 +230,9 @@ export default function PublicListPage() {
           {localizedItems.map(m => {
             const poster = tmdb.posterUrl(m.poster_path);
             const title  = m.title || m.name || m._fallback_title || '';
+            const type   = m.media_type || (m.title ? 'movie' : 'tv');
+            const watched = isWatched(m.id);
+            const inList  = isInWatchlist(m.id);
             return (
               <div key={m.id} className="plp-item" onClick={() => setSelected(m)}>
                 <div className="plp-item__poster">
@@ -235,6 +240,23 @@ export default function PublicListPage() {
                     ? <img src={poster} alt={title} loading="lazy"/>
                     : <div className="plp-item__no-poster"><ListLinear size={20}/></div>
                   }
+                  <div className="plp-item__overlay">
+                    <button
+                      className={"plp-item__btn" + (watched ? " plp-item__btn--active-g" : "")}
+                      onClick={e => { e.stopPropagation(); watched ? removeFromWatched(m.id) : addToWatched({...m, media_type: type}); }}
+                      title={watched ? "Remove from watched" : "Mark as watched"}
+                    >
+                      {watched ? <EyeClosedLinear size={13}/> : <EyeLinear size={13}/>}
+                    </button>
+                    <button
+                      className={"plp-item__btn" + (inList && !watched ? " plp-item__btn--active-y" : "")}
+                      onClick={e => { e.stopPropagation(); inList ? removeFromWatchlist(m.id) : addToWatchlist({...m, media_type: type}); }}
+                      disabled={watched}
+                      title={inList ? "Remove from watchlist" : "Add to watchlist"}
+                    >
+                      {inList && !watched ? <BookmarkOpenedLinear size={13}/> : <BookmarkLinear size={13}/>}
+                    </button>
+                  </div>
                 </div>
                 <p className="plp-item__title">{title}</p>
               </div>

@@ -220,6 +220,38 @@
   color: var(--text3);
 }
 
+/* Watched / Watchlist overlay buttons */
+/* Watched / Watchlist overlay — exact MovieCard style */
+.plp-item__overlay {
+  position: absolute; inset: 0;
+  display: flex; gap: 5px; align-items: flex-end; padding: 8px;
+  background: transparent;
+  z-index: 2;
+  pointer-events: none;
+}
+.plp-item__overlay > * { pointer-events: all; }
+
+@media (hover: hover) {
+  .plp-item__overlay {
+    background: linear-gradient(to top, rgba(0,0,0,0.78) 0%, transparent 55%);
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .plp-item:hover .plp-item__overlay { opacity: 1; }
+}
+
+.plp-item__btn {
+  flex: 1; min-height: 34px; border-radius: 8px;
+  background: rgba(0,0,0,0.55); color: #fff;
+  border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.plp-item__btn:active { transform: scale(0.93); }
+.plp-item__btn--active-g { background: rgba(34,197,94,0.48); }
+.plp-item__btn--active-y { background: rgba(232,197,71,0.48); }
+.plp-item__btn:disabled { opacity: 0.3; pointer-events: none; }
+
 .plp-item__title {
   font-size: 11px;
   color: var(--text2);
