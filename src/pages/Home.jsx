@@ -262,28 +262,39 @@ function PopularListsContent({ lang }) {
           .filter(Boolean)
           .map(m => tmdb.posterUrl(m.poster_path))
           .filter(Boolean);
+
+    const isSingle = !list.image && posters.length === 1;
+
     return (
       <div key={list.id} className="pop-list-card" onClick={() => navigate(`/list/${list.id}`)}>
-        <div className={`pop-list-card__cover${posters.length === 1 ? ' pop-list-card__cover--single' : ''}`}>
-          {list.image
-            ? <img src={list.image} alt="" style={{gridColumn:'1/-1'}}/>
-            : posters.length > 0
-              ? posters.map((url, i) => <img key={i} src={url} alt=""/>)
-              : <div className="pop-list-card__cover--empty"><ListLinear size={28} strokeWidth={1}/></div>
-          }
-        </div>
+        {isSingle ? (
+          <div className="pop-list-card__cover pop-list-card__cover--single">
+            <img className="pop-list-card__poster-bg" src={posters[0]} alt="" />
+            <img className="pop-list-card__poster-main" src={posters[0]} alt="" />
+          </div>
+        ) : (
+          <div className="pop-list-card__cover" data-count={list.image ? 1 : posters.length}>
+            {list.image
+              ? <img src={list.image} alt="" style={{gridColumn:'1/-1', gridRow:'1/-1'}}/>
+              : posters.length > 0
+                ? posters.map((url, i) => <img key={i} src={url} alt=""/>)
+                : <div className="pop-list-card__cover--empty"><ListLinear size={24} strokeWidth={1}/></div>
+            }
+          </div>
+        )}
+        <div className="pop-list-card__overlay" />
+        {items.length > 0 && (
+          <span className="pop-list-card__count">{items.length}</span>
+        )}
+        {list.is_site_list && (
+          <span className="pop-list-card__site-badge">{t('home.siteListBadge')}</span>
+        )}
         <div className="pop-list-card__info">
-          <p className="pop-list-card__name">
-            {list.is_site_list && (
-              <span className="pop-list-card__site-badge">{t('home.siteListBadge')}</span>
-            )}
-            {list.name}
-          </p>
+          <p className="pop-list-card__name">{list.name}</p>
           <p className="pop-list-card__meta">
-            {list.author_name} · {items.length} {t('home.listsTitles')}
-            {list.likes > 0 && <span className="pop-list-card__likes"> · ♥ {list.likes}</span>}
+            <span className="pop-list-card__author">{list.author_name}</span>
+            {list.likes > 0 && <span className="pop-list-card__likes">♥ {list.likes}</span>}
           </p>
-          {list.description && <p className="pop-list-card__desc">{list.description}</p>}
         </div>
       </div>
     );
