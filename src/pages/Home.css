@@ -546,3 +546,15 @@
   line-height: 1.5;
   box-shadow: 0 2px 8px rgba(232,197,71,0.35);
 }
+/* ─── Wide desktop (1280px+): larger padding throughout ─────────────────── */
+@media (min-width: 1280px) {
+  .hero { margin: 32px 40px 0; }
+  .main-tab-bar-wrap { padding: 26px 40px 0; }
+  .home-section__title { padding: 0 40px; }
+  .home-section__scroll { padding: 4px 40px 8px; scroll-padding-left: 40px; }
+  .home-section__item { width: 175px; }
+  .coming-soon-grid-wrap { padding: 16px 40px; }
+  .popular-lists-grid { padding: 12px 40px 32px; }
+  .popular-lists-section__header { padding: 18px 40px 10px; }
+  .popular-lists-section__header--community { padding-top: 20px; }
+}
