@@ -91,7 +91,7 @@ body.modal-open { overflow: hidden !important; touch-action: none; }
 }
 /* On desktop: no nav at bottom, use sidebar */
 @media (min-width: 900px) {
-  .page { padding-bottom: 40px; max-width: 1200px; margin: 0 auto; width: 100%; }
+  .page { padding-bottom: 40px; max-width: 1500px; margin: 0 auto; width: 100%; }
 }
 
 /* ─── ANIMATIONS ─── */
@@ -180,4 +180,46 @@ body.modal-open { overflow: hidden !important; touch-action: none; }
     z-index: 90;
     font-family: 'DM Sans', monospace;
   }
+}
+/* ─── Wide desktop (1280px+): expand content on all pages ──────────────── */
+@media (min-width: 1280px) {
+
+  /* ── Search ── */
+  .search-header          { padding: 36px 40px 0; }
+  .search-trending-label  { padding: 4px 40px 8px; }
+  .search-grid            { grid-template-columns: repeat(6, 1fr); padding: 8px 40px; gap: 14px; }
+  .search-results-count   { padding: 0 40px 8px; }
+  .search-actors-grid     { grid-template-columns: repeat(9, 1fr); padding: 4px 40px 12px; }
+
+  /* ── Recs ── */
+  .recs-header  { padding: 36px 40px 12px; }
+  .recs-grid    { grid-template-columns: repeat(6, 1fr); padding: 4px 40px 8px; gap: 14px; }
+
+  /* ── Similar ── */
+  .similar-header { padding: 36px 40px 20px; }
+  .similar-grid   { grid-template-columns: repeat(6, 1fr); padding: 0 40px 24px; gap: 14px; }
+
+  /* ── Actor ── */
+  .actor-page__topbar   { padding-left: 40px; padding-right: 40px; }
+  .actor-page__body     { padding: 0 40px; max-width: none; }
+  .actor-page__films-grid { grid-template-columns: repeat(8, 1fr); }
+
+  /* ── Collection ── */
+  .collection-page__grid { grid-template-columns: repeat(6, 1fr); padding: 0 40px 24px; gap: 14px; }
+
+  /* ── Profile ── */
+  .profile-topbar    { padding-left: 40px; padding-right: 40px; }
+  .profile-card      { margin-left: 40px; margin-right: 40px; }
+  .profile-stats     { margin-left: 40px; margin-right: 40px; }
+  .profile-roulette  { padding: 0 40px; }
+  .profile-lists     { padding: 0 40px; }
+  .poster-grid       { grid-template-columns: repeat(7, 1fr); }
+  .list-detail__header { padding-left: 40px; padding-right: 40px; }
+  .list-edit__topbar   { padding-left: 40px; padding-right: 40px; }
+  .list-edit__form-row { padding-left: 40px; padding-right: 40px; }
+  .picker-grid       { grid-template-columns: repeat(6, 1fr); }
+
+  /* ── Public List ── */
+  .public-list-page__header { padding: 36px 40px 24px; }
+  .public-list-page__grid   { padding: 0 40px 24px; gap: 14px; }
 }

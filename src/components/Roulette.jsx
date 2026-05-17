@@ -64,7 +64,13 @@ export default function Roulette({ onMovieClick }) {
   // Localized watchlist — titles and posters in current language
   const localizedWatchlist = useLocalizedMovies(watchlist, lang);
 
-  const allItems = localizedWatchlist.filter(m => m.poster_path);
+  const today = new Date().toISOString().slice(0, 10);
+  const allItems = localizedWatchlist.filter(m => {
+    if (!m.poster_path) return false;
+    const date = m.release_date || m.first_air_date;
+    if (date && date > today) return false; // exclude unreleased
+    return true;
+  });
 
   // Determine media type: prefer explicit media_type field; fall back to
   // title (movies) vs name (TV) heuristic only when media_type is absent.

@@ -64,17 +64,16 @@ export default function PublicListPage() {
     setLikeLoading(true);
     const likedSet = getLikedSet();
     const nowLiked = !liked;
-    const delta = nowLiked ? 1 : -1;
-    const newCount = Math.max(0, likeCount + delta);
 
+    // Optimistic UI update
     setLiked(nowLiked);
-    setLikeCount(newCount);
+    setLikeCount(prev => Math.max(0, prev + (nowLiked ? 1 : -1)));
 
     if (nowLiked) likedSet.add(listId); else likedSet.delete(listId);
     try { localStorage.setItem(likedKey, JSON.stringify([...likedSet])); } catch {}
 
-    // Update likes count in supabase
-    await supabase.from('public_lists').update({ likes: newCount }).eq('id', listId);
+    // Atomic increment/decrement via RPC — prevents client-side likes manipulation
+    await supabase.rpc('increment_list_likes', { list_id: listId, delta: nowLiked ? 1 : -1 });
 
     // If liking — add list to profile as read-only
     if (list && list.user_id !== user?.id) {
@@ -174,7 +173,7 @@ export default function PublicListPage() {
         </button>
 
         <div className="plp-hero">
-          <div className={`plp-cover ${coverPosters.length === 1 ? 'plp-cover--single' : ''}`}>
+          <div className={`plp-cover ${list.image || coverPosters.length === 1 ? 'plp-cover--single' : ''}`}>
             {list.image
               ? <img src={list.image} alt=""/>
               : coverPosters.length > 0
