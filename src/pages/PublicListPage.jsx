@@ -174,7 +174,7 @@ export default function PublicListPage() {
         </button>
 
         <div className="plp-hero">
-          <div className={`plp-cover ${coverPosters.length === 1 ? 'plp-cover--single' : ''}`}>
+          <div className={`plp-cover ${list.image || coverPosters.length === 1 ? 'plp-cover--single' : ''}`}>
             {list.image
               ? <img src={list.image} alt=""/>
               : coverPosters.length > 0
