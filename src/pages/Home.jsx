@@ -214,7 +214,7 @@ function PopularListsContent({ lang }) {
       .from('public_lists')
       .select('id, name, description, image, items, author_name, likes, is_site_list')
       .eq('is_public', true)
-      .gte('likes', 100)
+      .or('is_site_list.eq.true,likes.gte.100')
       .order('is_site_list', { ascending: false })
       .order('likes', { ascending: false })
       .limit(50)

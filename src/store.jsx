@@ -252,6 +252,7 @@ export function StoreProvider({ children, userId }) {
       showProgress: opts.showProgress !== false,
       deadline: opts.deadline || null,
       isPublic: opts.isPublic !== undefined ? opts.isPublic : true,
+      isSiteList: opts.isSiteList || false,
       separateTracking: opts.separateTracking || false,
       listWatched: [],
       listWatchlist: [],
@@ -265,7 +266,25 @@ export function StoreProvider({ children, userId }) {
 
   const canEditCustomList = (list) => list?.isOwned !== false;
 
-  const deleteCustomList = useCallback((listId) => setCustomLists(prev => { const n = {...prev}; delete n[listId]; return n; }), []);
+  const deleteCustomList = useCallback((listId) => {
+    // Always attempt to remove from public_lists — covers public, site, and share-linked lists.
+    // We don't gate on local isPublic flag because the list may have been published via
+    // the share button without updating local state, or via the settings modal.
+    supabase
+      .from('public_lists')
+      .delete()
+      .eq('id', listId)
+      .then(({ error }) => {
+        if (error) console.warn('[lists] failed to delete from public_lists:', error.message, error.code);
+        else console.log('[lists] deleted from public_lists:', listId);
+      });
+
+    setCustomLists(prev => {
+      const n = { ...prev };
+      delete n[listId];
+      return n;
+    });
+  }, []);
 
   // Allows the user to take ownership of a previously read-only list (e.g. a liked public list).
   const promoteCustomListOwnership = useCallback((listId) => setCustomLists(prev => {
