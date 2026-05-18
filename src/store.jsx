@@ -11,20 +11,24 @@ export function clearLocalStore() {
   STORE_KEYS.forEach(k => { try { localStorage.removeItem(k); } catch {} });
 }
 
-// Slim storage: only id + media_type stored in cloud/localStorage.
+// Slim storage: only id + media_type + addedAt stored in cloud/localStorage.
+// addedAt (unix ms) powers temporal decay in the recommendation algorithm.
 // All display data (title, poster, etc) is fetched from TMDB via useLocalizedMovies.
-// This reduces ~350 bytes per item to ~30 bytes — ~92% savings.
+// This reduces ~350 bytes per item to ~40 bytes — ~89% savings.
 const normalize = (movie) => ({
   id:         Number(movie.id),
   media_type: movie.media_type || (movie.title ? 'movie' : 'tv'),
+  addedAt:    movie.addedAt || Date.now(),
 });
 
-// For migration: detect and strip legacy fat objects already in storage
+// For migration: detect and strip legacy fat objects already in storage,
+// preserving addedAt if it exists (for temporal decay in recommendations).
 const slimify = (arr) => {
   if (!Array.isArray(arr)) return [];
   return arr.map(item => ({
     id:         Number(item.id),
     media_type: item.media_type || (item.title ? 'movie' : 'tv'),
+    addedAt:    item.addedAt || Date.now(),
   }));
 };
 
@@ -217,8 +221,16 @@ export function StoreProvider({ children, userId }) {
 
   const isWatched     = useCallback((id) => watched.some(m => m.id === Number(id)), [watched]);
   const isInWatchlist = useCallback((id) => watchlist.some(m => m.id === Number(id)), [watchlist]);
-  const rateMovie     = useCallback((id, score) => setRatings(prev => ({ ...prev, [id]: score })), []);
-  const getRating     = useCallback((id) => ratings[id] || null, [ratings]);
+  const rateMovie     = useCallback((id, score) => setRatings(prev => ({
+    ...prev,
+    [id]: { score, ratedAt: Date.now() },
+  })), []);
+  // Backwards-compatible: ratings[id] can be a number (legacy) or { score, ratedAt }
+  const getRating     = useCallback((id) => {
+    const r = ratings[id];
+    if (!r) return null;
+    return typeof r === 'object' ? r.score : r;
+  }, [ratings]);
 
   const likeActor   = useCallback((actor) => setLikedActors(prev => ({ ...prev, [actor.id]: { id: actor.id, name: actor.name, profile_path: actor.profile_path || null } })), []);
   const unlikeActor = useCallback((id) => setLikedActors(prev => { const n = {...prev}; delete n[id]; return n; }), []);

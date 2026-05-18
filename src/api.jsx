@@ -15,7 +15,7 @@ const SHOW_GENRE_IDS = new Set([
   10767, // Talk Show
 ]);
 
-// Keywords in titles that indicate awards shows, talk shows, live events
+// Keywords in titles that indicate awards shows, talk shows, live events, shorts
 const SHOW_TITLE_PATTERNS = [
   /\bawards?\b/i,
   /\boscars?\b/i,
@@ -56,20 +56,57 @@ const SHOW_TITLE_PATTERNS = [
   /\bspecial edition\b/i,
   /\bchampionship\b/i,
   /\bsuper bowl\b/i,
+  // ── Short/bonus/behind-the-scenes content ────────────────────────────────
+  /\bshort film\b/i,
+  /\bteaser\b/i,
+  /\bbonus clip\b/i,
+  /\bdeleted scene/i,
+  /\bbehind the scenes\b/i,
+  /\bmake.*of\b/i,
+  /\bfeaturette\b/i,
+  /\bbloopers?\b/i,
+  /\bgag reel\b/i,
+  /^team\s+\w+[\s:]/i,    // "Team Thor:", "Team Darryl:" etc. — Marvel one-shots
+  /\bone[- ]shot\b/i,     // explicitly labelled one-shots
 ];
 
+// TMDB "type" field values that are not full features or proper TV series.
+// Present on TV items returned from /discover and /credits.
+const JUNK_TV_TYPES = new Set([
+  'miniseries_special', 'talk_show', 'news', 'reality',
+]);
+
 /**
- * Returns true if the item is a talk show, award ceremony, reality/news show,
- * or any other non-movie/non-scripted TV content that should be hidden.
+ * Returns true if the item should be excluded from recommendations:
+ * talk shows, award ceremonies, reality/news, short films, bonus clips,
+ * one-shots, and anything under MIN_RUNTIME_MOVIE minutes for movies.
  */
 export function isShowOrAward(item) {
   const genres = item.genre_ids || [];
   if (genres.some(id => SHOW_GENRE_IDS.has(id))) return true;
-  const title = item.name || item.title || item.original_name || item.original_title || '';
+
+  const title = (item.name || item.title || item.original_name || item.original_title || '').trim();
   if (SHOW_TITLE_PATTERNS.some(re => re.test(title))) return true;
-  // episode_count exists on TV cast entries — if it's extremely high (>100) and
-  // it's a talk/reality type, bail out.  Most scripted shows top out around 100.
+
+  // episode_count on TV cast entries — daily shows stack these fast
   if (item.media_type === 'tv' && (item.episode_count || 0) > 200) return true;
+
+  // TMDB explicit type field (present on TV detail objects)
+  if (item.type && JUNK_TV_TYPES.has(item.type.toLowerCase().replace(/\s+/g, '_'))) return true;
+
+  // ── Runtime-based filter ──────────────────────────────────────────────────
+  // runtime is populated when we have detail data (enrichment cache / modal open).
+  // MIN for movies: 40 min — filters shorts, one-shots, bonus clips.
+  // We do NOT filter TV by runtime since episode_run_time varies widely.
+  const runtime = item.runtime ?? item.episode_run_time?.[0] ?? null;
+  if (item.media_type === 'movie' && runtime !== null && runtime < 40) return true;
+
+  // ── Vote-count floor as a junk proxy ────────────────────────────────────
+  // Shorts and one-shots almost always have very few votes even when they're
+  // famous. A movie-type item with <20 votes is almost certainly ephemeral.
+  // (Main scoring already requires ≥15, but defence-in-depth here.)
+  if (item.media_type === 'movie' && (item.vote_count || 0) > 0 && (item.vote_count || 0) < 20) return true;
+
   return false;
 }
 
@@ -95,6 +132,80 @@ const getLang = () => {
 
 // ─── Session-level details cache (fix #9) ────────────────────────────────────
 const _detailsCache = new Map();
+
+// ─── Enrichment cache for recommendation algorithm ────────────────────────────
+// Stores lightweight metadata extracted from movie/tv detail calls:
+// { directorId, directorName, keywordIds, runtime, collectionId, budget }
+// Populated lazily whenever MovieModal loads details — zero extra API calls.
+const _enrichCache = new Map();
+
+// Called by tmdb.movieDetails / tmdb.tvDetails after each successful detail fetch.
+// Extracts and stores only the fields the recommendation algorithm needs.
+function _storeEnrich(id, mediaType, data) {
+  if (!data || _enrichCache.has(`${mediaType}_${id}`)) return;
+  const director = (data.credits?.crew || []).find(c => c.job === 'Director');
+  const writers  = (data.credits?.crew || [])
+    .filter(c => ['Screenplay','Writer','Story'].includes(c.job))
+    .slice(0, 2)
+    .map(c => c.id);
+  _enrichCache.set(`${mediaType}_${id}`, {
+    directorId:   director?.id   || null,
+    directorName: director?.name || null,
+    writerIds:    writers,
+    keywordIds:   [],          // filled by fetchKeywords below
+    runtime:      data.runtime || data.episode_run_time?.[0] || null,
+    collectionId: data.belongs_to_collection?.id || null,
+    budget:       data.budget  || 0,
+  });
+}
+
+// Fetch keywords for a movie/tv from TMDB; merges into existing enrichment entry.
+// Called lazily by the recommendation algorithm when building a rich profile.
+export async function fetchEnrichKeywords(id, mediaType) {
+  const key = `${mediaType}_${id}`;
+  const entry = _enrichCache.get(key);
+  if (!entry) return [];
+  if (entry.keywordIds.length > 0) return entry.keywordIds;    // already fetched
+  try {
+    const lang  = getLang();
+    const path  = mediaType === 'tv'
+      ? `${BASE}/tv/${id}/keywords`
+      : `${BASE}/movie/${id}/keywords`;
+    const res = await fetch(`${path}?language=${lang}`, { headers: HEADERS });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const ids  = (data.keywords || data.results || []).map(k => k.id).slice(0, 20);
+    entry.keywordIds = ids;
+    return ids;
+  } catch { return []; }
+}
+
+// Read-only accessor used by recommendation algorithm.
+export function getEnrichEntry(id, mediaType) {
+  return _enrichCache.get(`${mediaType}_${id}`) || null;
+}
+
+// Fetch lightweight enrichment data for movies not yet in _enrichCache.
+// Used during profile build to enrich seed movies that were never opened in modal.
+export async function fetchEnrichBatch(items) {
+  const missing = items.filter(m => !_enrichCache.has(`${m.media_type}_${m.id}`));
+  if (missing.length === 0) return;
+  await Promise.all(missing.slice(0, 8).map(async m => {
+    try {
+      const lang   = getLang();
+      const isTV   = m.media_type === 'tv';
+      const path   = isTV ? `/tv/${m.id}` : `/movie/${m.id}`;
+      const append = isTV ? 'credits' : 'credits';
+      const res    = await fetch(
+        `${BASE}${path}?language=${lang}&append_to_response=${append}`,
+        { headers: HEADERS }
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      _storeEnrich(m.id, m.media_type, data);
+    } catch {}
+  }));
+}
 
 const get = async (path, params = {}) => {
   const url = new URL(`${BASE}${path}`);
@@ -146,6 +257,7 @@ export const tmdb = {
     if (_detailsCache.has(key)) return _detailsCache.get(key);
     const data = await get(`/movie/${id}`, { append_to_response: 'credits,videos,release_dates,production_companies' });
     _detailsCache.set(key, data);
+    _storeEnrich(id, 'movie', data);
     return data;
   },
   tvDetails:     async (id) => {
@@ -153,6 +265,7 @@ export const tmdb = {
     if (_detailsCache.has(key)) return _detailsCache.get(key);
     const data = await get(`/tv/${id}`, { append_to_response: 'credits,videos,content_ratings,production_companies' });
     _detailsCache.set(key, data);
+    _storeEnrich(id, 'tv', data);
     return data;
   },
   genres:        (type = 'movie') => get(`/genre/${type}/list`),

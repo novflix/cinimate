@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { HEADERS, isShowOrAward, traktRelatedBatch } from '../api';
+import {
+  HEADERS, isShowOrAward, traktRelatedBatch,
+  getEnrichEntry, fetchEnrichBatch, fetchEnrichKeywords,
+} from '../api';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
 
@@ -9,46 +12,87 @@ const EASTASIAN_COUNTRIES = new Set(['KR', 'CN', 'TW', 'HK', 'TH']);
 const MAX_SAME_GENRE_RUN  = 3;
 const MAX_SAME_TYPE_RUN   = 4;
 const EXPLORATION_RATE    = 0.12;
+const DECAY_LAMBDA        = 0.00075; // e^(-λ·days) → half-life ≈ 924 days
+const RUNTIME_SHORT       = 90;
+const RUNTIME_LONG        = 130;
+const BUDGET_INDIE        = 5_000_000;
+const BUDGET_MID          = 40_000_000;
 
 const TMDB_LANG_MAP = {
   ru: 'ru-RU', en: 'en-US', es: 'es-ES', fr: 'fr-FR',
   de: 'de-DE', pt: 'pt-BR', it: 'it-IT', tr: 'tr-TR', zh: 'zh-CN',
 };
 
-// Infers the user's preferred release era from their watch history.
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getRatingScore(ratings, id) {
+  const r = ratings[id];
+  if (!r) return null;
+  return typeof r === 'object' ? r.score : r;
+}
+
+function getRatingTimestamp(ratings, id) {
+  const r = ratings[id];
+  if (!r) return null;
+  return typeof r === 'object' ? (r.ratedAt || null) : null;
+}
+
+function temporalWeight(ts) {
+  if (!ts) return 1;
+  const days = (Date.now() - ts) / 86_400_000;
+  return Math.exp(-DECAY_LAMBDA * days);
+}
+
+function runtimeBucket(mins) {
+  if (!mins) return null;
+  if (mins < RUNTIME_SHORT) return 'short';
+  if (mins < RUNTIME_LONG)  return 'medium';
+  return 'long';
+}
+
+function budgetTier(usd) {
+  if (!usd || usd === 0)  return null;
+  if (usd < BUDGET_INDIE) return 'indie';
+  if (usd < BUDGET_MID)   return 'mid';
+  return 'blockbuster';
+}
+
 function detectEraPreference(watched, watchlist) {
   const all = [...watched, ...watchlist];
   if (all.length === 0) return { minYear: new Date().getFullYear() - 10, preferRecent: true };
-
   const years = all
     .map(m => parseInt((m.release_date || m.first_air_date || '').slice(0, 4)))
     .filter(y => y > 1900);
-
   if (years.length === 0) return { minYear: new Date().getFullYear() - 10, preferRecent: true };
-
   const avg    = years.reduce((s, y) => s + y, 0) / years.length;
   const min    = Math.min(...years);
   const sorted = [...years].sort((a, b) => a - b);
   const median = sorted[Math.floor(sorted.length / 2)];
-
   const enjoysClassics = min < 1985;
   const safeMin        = enjoysClassics ? min - 5 : Math.max(median - 8, 1980);
   const preferRecent   = avg > (new Date().getFullYear() - 8);
-
   return { minYear: safeMin, preferRecent, median };
 }
 
-// Builds the user taste profile used to score and filter candidates.
-// Rating weights: 9-10 → seed 4.0, 7-8 → 2.5, 5-6 → 0.4 (neutral), 1-4 → genre penalty.
-// Finishing a TV show applies a ×1.4 multiplier — strongest positive signal.
+// ─── buildProfile v2 ─────────────────────────────────────────────────────────
 export function buildProfile(watched, watchlist, ratings, likedActors, dislikedIds, tvProgress) {
-  const seedMovies  = [];
-  const genreBoost  = {};
-  const originCount = {};
+  const seedMovies     = [];
+  const genreBoost     = {};
+  const originCount    = {};
+  const directorBoost  = {};
+  const writerBoost    = {};
+  const keywordBoost   = {};
+  const runtimeTally   = { short: 0, medium: 0, long: 0 };
+  const budgetTally    = { indie: 0, mid: 0, blockbuster: 0 };
+  const franchiseIds   = new Set();
+
   const { minYear, preferRecent, median } = detectEraPreference(watched, watchlist);
 
   watched.forEach(m => {
-    const r = ratings[m.id];
+    const r       = getRatingScore(ratings, m.id);
+    const ratedAt = getRatingTimestamp(ratings, m.id);
+    const addedAt = m.addedAt || null;
+    const decay   = temporalWeight(ratedAt || addedAt);
 
     if (dislikedIds.includes(m.id)) {
       (m.genre_ids || []).forEach(g => { genreBoost[g] = (genreBoost[g] || 0) - 1.5; });
@@ -57,27 +101,49 @@ export function buildProfile(watched, watchlist, ratings, likedActors, dislikedI
 
     const progress     = tvProgress && m.media_type === 'tv' ? tvProgress[m.id] : null;
     const progressMult = progress?.finished === true ? 1.4 : 1;
+    const enrich       = getEnrichEntry(m.id, m.media_type);
+
+    let baseWeight = 0;
 
     if (!r) {
-      seedMovies.push({ id: m.id, media_type: m.media_type || 'movie', weight: 0.8 * progressMult });
+      baseWeight = 0.8;
+      seedMovies.push({ id: m.id, media_type: m.media_type || 'movie', weight: baseWeight * progressMult * decay });
       (m.genre_ids || []).forEach(g => { genreBoost[g] = (genreBoost[g] || 0) + 0.3; });
-      return;
-    }
-
-    if (r >= 9) {
-      seedMovies.push({ id: m.id, media_type: m.media_type || 'movie', weight: 4 * progressMult });
-      (m.genre_ids || []).forEach(g => { genreBoost[g] = (genreBoost[g] || 0) + 2.5; });
+    } else if (r >= 9) {
+      baseWeight = 4.0;
+      seedMovies.push({ id: m.id, media_type: m.media_type || 'movie', weight: baseWeight * progressMult * decay });
+      (m.genre_ids || []).forEach(g => { genreBoost[g] = (genreBoost[g] || 0) + 2.5 * decay; });
       (m.origin_country || []).forEach(c => { originCount[c] = (originCount[c] || 0) + 2; });
     } else if (r >= 7) {
-      seedMovies.push({ id: m.id, media_type: m.media_type || 'movie', weight: 2.5 * progressMult });
-      (m.genre_ids || []).forEach(g => { genreBoost[g] = (genreBoost[g] || 0) + 1.2; });
+      baseWeight = 2.5;
+      seedMovies.push({ id: m.id, media_type: m.media_type || 'movie', weight: baseWeight * progressMult * decay });
+      (m.genre_ids || []).forEach(g => { genreBoost[g] = (genreBoost[g] || 0) + 1.2 * decay; });
       (m.origin_country || []).forEach(c => { originCount[c] = (originCount[c] || 0) + 1; });
     } else if (r >= 5) {
-      seedMovies.push({ id: m.id, media_type: m.media_type || 'movie', weight: 0.4 * progressMult });
+      baseWeight = 0.4;
+      seedMovies.push({ id: m.id, media_type: m.media_type || 'movie', weight: baseWeight * progressMult * decay });
     } else {
       (m.genre_ids || []).forEach(g => {
         genreBoost[g] = (genreBoost[g] || 0) - (r <= 2 ? 2.5 : 1.2);
       });
+    }
+
+    if (enrich && baseWeight >= 0.8) {
+      const enrichW = baseWeight * progressMult * decay;
+      if (enrich.directorId) {
+        directorBoost[enrich.directorId] = (directorBoost[enrich.directorId] || 0) + enrichW;
+      }
+      (enrich.writerIds || []).forEach(wid => {
+        writerBoost[wid] = (writerBoost[wid] || 0) + enrichW * 0.4;
+      });
+      (enrich.keywordIds || []).forEach(kid => {
+        keywordBoost[kid] = (keywordBoost[kid] || 0) + enrichW * 0.8;
+      });
+      const rb = runtimeBucket(enrich.runtime);
+      if (rb) runtimeTally[rb] += enrichW;
+      const bt = budgetTier(enrich.budget);
+      if (bt) budgetTally[bt] += enrichW;
+      if (enrich.collectionId && baseWeight >= 2.5) franchiseIds.add(enrich.collectionId);
     }
   });
 
@@ -88,7 +154,7 @@ export function buildProfile(watched, watchlist, ratings, likedActors, dislikedI
 
   dislikedIds.forEach(id => {
     const movie = [...watched, ...watchlist].find(m => m.id === id);
-    if (movie && !ratings[id]) {
+    if (movie && !getRatingScore(ratings, id)) {
       (movie.genre_ids || []).forEach(g => { genreBoost[g] = (genreBoost[g] || 0) - 1.2; });
     }
   });
@@ -96,12 +162,31 @@ export function buildProfile(watched, watchlist, ratings, likedActors, dislikedI
   const animeInterest     = (originCount['JP'] || 0) >= 2;
   const eastAsianInterest = ['KR','CN','TW','HK','TH'].some(c => (originCount[c] || 0) >= 2);
 
-  // Secondary liked genres (skip top) used for exploration slots.
+  const runtimePref = Object.entries(runtimeTally).reduce(
+    (best, [k, v]) => v > best.val ? { bucket: k, val: v } : best,
+    { bucket: null, val: 0 }
+  ).bucket;
+
+  const budgetPref = Object.entries(budgetTally).reduce(
+    (best, [k, v]) => v > best.val ? { bucket: k, val: v } : best,
+    { bucket: null, val: 0 }
+  ).bucket;
+
   const allPositiveGenres = Object.entries(genreBoost)
     .filter(([, v]) => v > 0.3)
     .sort((a, b) => b[1] - a[1])
     .map(([g]) => Number(g));
   const explorationGenres = allPositiveGenres.slice(1, 4);
+
+  const topDirectors = Object.entries(directorBoost)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([id, score]) => ({ id: Number(id), score }));
+
+  const topKeywords = Object.entries(keywordBoost)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([id]) => Number(id));
 
   const seenSeeds = new Set();
   const posSeeds  = seedMovies
@@ -118,61 +203,52 @@ export function buildProfile(watched, watchlist, ratings, likedActors, dislikedI
   return {
     seedMovies: posSeeds,
     likedActorIds: Object.keys(likedActors).map(Number),
-    genreBoost,
+    genreBoost, directorBoost, writerBoost, keywordBoost,
+    topDirectors, topKeywords,
+    runtimePref, budgetPref,
+    franchiseIds,
     avoidIds,
-    minYear,
-    preferRecent,
-    medianYear: median,
-    animeInterest,
-    eastAsianInterest,
+    minYear, preferRecent, medianYear: median,
+    animeInterest, eastAsianInterest,
     explorationGenres,
   };
 }
 
-// Filters anime and East Asian content when the user shows no interest in them.
-// Exception: critically acclaimed titles (≥8.2 rating, ≥2000 votes) always pass.
+// ─── Origin filter ────────────────────────────────────────────────────────────
 function passesOriginFilter(item, animeInterest, eastAsianInterest) {
   const countries = item.origin_country || [];
-
   if (
     !animeInterest &&
     countries.some(c => ANIME_COUNTRIES.has(c)) &&
     (item.genre_ids || []).includes(GENRE_ANIMATION)
   ) return false;
-
   if (!eastAsianInterest && countries.some(c => EASTASIAN_COUNTRIES.has(c))) {
     const isAcclaimed = (item.vote_average || 0) >= 8.2 && (item.vote_count || 0) >= 2000;
     if (!isAcclaimed) return false;
   }
-
   return true;
 }
 
-// Reorders candidates to prevent long runs of the same genre or media type,
-// and injects exploration picks at a fixed interval.
+// ─── Diversity buffer ─────────────────────────────────────────────────────────
 function applyDiversityBuffer(candidates) {
   if (candidates.length === 0) return [];
-
   const splitIdx     = Math.floor(candidates.length * (1 - EXPLORATION_RATE * 2));
   const mainQueue    = [...candidates.slice(0, splitIdx)];
   const exploreQueue = [...candidates.slice(splitIdx)];
   const result       = [];
-
-  let genreRun      = { genre: null, count: 0 };
-  let typeRun       = { type: null,  count: 0 };
-  const exploreSlot = Math.round(1 / EXPLORATION_RATE);
+  let genreRun       = { genre: null, count: 0 };
+  let typeRun        = { type: null,  count: 0 };
+  const exploreSlot  = Math.round(1 / EXPLORATION_RATE);
   let slot = 0;
 
   while (mainQueue.length > 0 || exploreQueue.length > 0) {
     slot++;
-
     if (exploreQueue.length > 0 && slot % exploreSlot === 0) {
       result.push(exploreQueue.shift());
       genreRun = { genre: null, count: 0 };
       typeRun  = { type: null,  count: 0 };
       continue;
     }
-
     if (mainQueue.length === 0) { result.push(...exploreQueue.splice(0)); break; }
 
     let picked = null, pickedIdx = -1;
@@ -184,25 +260,22 @@ function applyDiversityBuffer(candidates) {
       const typeOk  = typeRun.type !== pt || typeRun.count < MAX_SAME_TYPE_RUN;
       if (genreOk && typeOk) { picked = c; pickedIdx = i; break; }
     }
-
     if (picked === null) {
       picked = mainQueue[0]; pickedIdx = 0;
       genreRun = { genre: null, count: 0 };
       typeRun  = { type: null,  count: 0 };
     }
-
     mainQueue.splice(pickedIdx, 1);
     result.push(picked);
-
     const pg = (picked.genre_ids || [])[0] || null;
     const pt = picked.media_type || 'movie';
     genreRun = pg === genreRun.genre ? { genre: pg, count: genreRun.count + 1 } : { genre: pg, count: 1 };
     typeRun  = pt === typeRun.type   ? { type: pt,  count: typeRun.count + 1  } : { type: pt,  count: 1 };
   }
-
   return result;
 }
 
+// ─── URL helpers ──────────────────────────────────────────────────────────────
 function buildDiscoverUrl(base, params) {
   return `${base}?${new URLSearchParams(params)}`;
 }
@@ -214,15 +287,33 @@ function yearParams(minYear, preferRecent, mediaType = 'movie') {
   return { [`${dateField}.gte`]: cutoff };
 }
 
-// Fetches and scores candidates using four strategies:
-// 1. TMDB /recommendations from rotating top seeds
-// 1b. Trakt community-based related titles (first 3 pages only)
-// 2. Credits of liked actors/directors
-// 3. /discover by top liked genres (alternates sort to surface different content across pages)
-// 4. Exploration: secondary genres with a score penalty so they land in exploration slots
+// ─── Scoring helpers ──────────────────────────────────────────────────────────
+function runtimeFitScore(itemRuntime, userPref) {
+  if (!itemRuntime || !userPref) return 0;
+  const bucket = runtimeBucket(itemRuntime);
+  if (bucket === userPref)  return 0.15;
+  if (userPref === 'medium') return -0.05;
+  return -0.15;
+}
+
+function budgetFitScore(itemBudget, userPref) {
+  if (!itemBudget || !userPref) return 0;
+  const tier = budgetTier(itemBudget);
+  if (tier === userPref) return 0.1;
+  if (
+    (userPref === 'indie' && tier === 'mid') ||
+    (userPref === 'blockbuster' && tier === 'mid') ||
+    userPref === 'mid'
+  ) return -0.02;
+  return -0.1;
+}
+
+// ─── fetchCandidates v2 ───────────────────────────────────────────────────────
 export async function fetchCandidates(profile, page, langCode) {
   const {
     seedMovies, likedActorIds, genreBoost,
+    directorBoost, writerBoost, keywordBoost,
+    topDirectors, topKeywords, runtimePref, budgetPref, franchiseIds,
     avoidIds, minYear, preferRecent,
     animeInterest, eastAsianInterest, explorationGenres,
   } = profile;
@@ -234,6 +325,7 @@ export async function fetchCandidates(profile, page, langCode) {
     !eastAsianInterest ? 'KR,CN,TW,HK,TH' : '',
   ].filter(Boolean).join(',');
 
+  // ── Strategy 1: TMDB recommendations from rotating seeds ──────────────────
   if (seedMovies.length > 0) {
     const numSeeds    = Math.min(4, seedMovies.length);
     const offset      = (page - 1) * numSeeds;
@@ -255,6 +347,7 @@ export async function fetchCandidates(profile, page, langCode) {
       } catch {}
     }));
 
+    // ── Strategy 1b: Trakt community picks ───────────────────────────────────
     if (page <= 3) {
       try {
         const traktItems = await traktRelatedBatch(uniquePicks.slice(0, 2));
@@ -273,14 +366,21 @@ export async function fetchCandidates(profile, page, langCode) {
     }
   }
 
-  if (likedActorIds.length > 0) {
-    const actorPick = likedActorIds[(page - 1) % likedActorIds.length];
+  // ── Strategy 2: Actor + Director credits ──────────────────────────────────
+  const allCreatorIds = [
+    ...likedActorIds.map(id => ({ id, type: 'actor' })),
+    ...topDirectors.map(d => ({ id: d.id, type: 'director' })),
+  ];
+
+  if (allCreatorIds.length > 0) {
+    const creatorPick = allCreatorIds[(page - 1) % allCreatorIds.length];
     try {
       const r = await fetch(
-        `https://api.themoviedb.org/3/person/${actorPick}/combined_credits?${lang}`,
+        `https://api.themoviedb.org/3/person/${creatorPick.id}/combined_credits?${lang}`,
         { headers: HEADERS }
       ).then(r => r.json());
 
+      const baseW = creatorPick.type === 'director' ? 3.0 : 3.5;
       [...(r.cast || []),
         ...(r.crew || []).filter(m => ['Director','Writer','Creator'].includes(m.job)),
       ]
@@ -295,10 +395,14 @@ export async function fetchCandidates(profile, page, langCode) {
           a.vote_average * Math.log10(Math.max(a.vote_count || 1, 1))
         )
         .slice(0, 30)
-        .forEach(m => results.push({ ...m, _source_weight: 3.5, _strategy: 'actor' }));
+        .forEach(m => results.push({
+          ...m, _source_weight: baseW,
+          _strategy: creatorPick.type === 'director' ? 'director' : 'actor',
+        }));
     } catch {}
   }
 
+  // ── Strategy 3: Genre-based discover ─────────────────────────────────────
   const topGenres = Object.entries(genreBoost)
     .filter(([, score]) => score > 0.5)
     .sort((a, b) => b[1] - a[1])
@@ -336,7 +440,6 @@ export async function fetchCandidates(profile, page, langCode) {
       } catch {}
     }
   } else {
-    // Fallback when no genre signals exist yet
     try {
       const [tr, topTv] = await Promise.all([
         fetch(`https://api.themoviedb.org/3/trending/movie/week?${lang}&page=${page}`, { headers: HEADERS }).then(r => r.json()),
@@ -347,6 +450,7 @@ export async function fetchCandidates(profile, page, langCode) {
     } catch {}
   }
 
+  // ── Strategy 4: Exploration via secondary genres ──────────────────────────
   if (explorationGenres.length > 0) {
     const expGenre = explorationGenres[page % explorationGenres.length];
     const excl     = excludeCountries ? { without_origin_country: excludeCountries } : {};
@@ -359,8 +463,46 @@ export async function fetchCandidates(profile, page, langCode) {
     } catch {}
   }
 
+  // ── Strategy 5 (NEW): Keyword-based discover ──────────────────────────────
+  if (topKeywords.length > 0) {
+    const kwId = topKeywords[page % topKeywords.length];
+    const excl  = excludeCountries ? { without_origin_country: excludeCountries } : {};
+    try {
+      const r = await fetch(buildDiscoverUrl('https://api.themoviedb.org/3/discover/movie', {
+        with_keywords:  String(kwId),
+        sort_by: page % 2 === 0 ? 'vote_average.desc' : 'popularity.desc',
+        'vote_count.gte': '100',
+        page: String((page % 4) + 1),
+        language: langCode,
+        ...excl,
+        ...yearParams(minYear, preferRecent, 'movie'),
+      }), { headers: HEADERS }).then(r => r.json());
+      (r.results || []).forEach(m => results.push({
+        ...m, media_type: 'movie', _source_weight: 1.4, _strategy: 'keyword',
+      }));
+    } catch {}
+  }
+
+  // ── Strategy 6 (NEW): Franchise / collection discover ─────────────────────
+  if (franchiseIds.size > 0 && page <= 5) {
+    const franchiseArr = [...franchiseIds];
+    const collId = franchiseArr[(page - 1) % franchiseArr.length];
+    try {
+      const r = await fetch(
+        `https://api.themoviedb.org/3/collection/${collId}?${lang}`,
+        { headers: HEADERS }
+      ).then(r => r.json());
+      (r.parts || []).forEach(m => results.push({
+        ...m, media_type: 'movie', _source_weight: 2.5, _strategy: 'franchise',
+      }));
+    } catch {}
+  }
+
+  // ── Scoring v2 ────────────────────────────────────────────────────────────
   const seen     = new Set();
   const maxBoost = Math.max(...Object.values(genreBoost).filter(v => v > 0), 1);
+  const maxDir   = Math.max(...Object.values(directorBoost).filter(v => v > 0), 1);
+  const maxKw    = Math.max(...Object.values(keywordBoost).filter(v => v > 0), 1);
 
   const scored = results
     .filter(m => {
@@ -373,23 +515,65 @@ export async function fetchCandidates(profile, page, langCode) {
       return true;
     })
     .map(m => {
-      const tmdbScore = (m.vote_average || 0) / 10;
-      const srcWeight = m._source_weight || 1;
+      const tmdbScore  = (m.vote_average || 0) / 10;
+      const srcWeight  = m._source_weight || 1;
 
       let rawGenre = 0;
       (m.genre_ids || []).forEach(g => { rawGenre += (genreBoost[g] || 0); });
-
       const normGenre    = (rawGenre / maxBoost) * 0.4;
       const voteSignal   = Math.log10(Math.max(m.vote_count || 1, 1)) / 15;
       const releaseYear  = parseInt((m.release_date || m.first_air_date || '2000').slice(0, 4));
       const recencyBoost = Math.max(0, (releaseYear - 2000) / 400);
-      const strategyMult =
-        m._strategy === 'actor'   ? 1.4 :
-        m._strategy === 'trakt'   ? 1.3 :
-        m._strategy === 'recs'    ? 1.1 :
-        m._strategy === 'explore' ? 0.85 : 1.0;
 
-      return { ...m, _score: (tmdbScore * srcWeight + normGenre + voteSignal + recencyBoost) * strategyMult };
+      const strategyMult =
+        m._strategy === 'franchise' ? 1.6 :
+        m._strategy === 'director'  ? 1.5 :
+        m._strategy === 'actor'     ? 1.4 :
+        m._strategy === 'trakt'     ? 1.3 :
+        m._strategy === 'keyword'   ? 1.25 :
+        m._strategy === 'recs'      ? 1.1 :
+        m._strategy === 'explore'   ? 0.85 : 1.0;
+
+      // Enrichment-derived signals
+      const enrich = getEnrichEntry(m.id, m.media_type);
+      let directorScore  = 0;
+      let writerScore    = 0;
+      let keywordScore   = 0;
+      let runtimeFit     = 0;
+      let budgetFit      = 0;
+      let franchiseBonus = 0;
+
+      if (enrich) {
+        if (enrich.directorId && directorBoost[enrich.directorId]) {
+          directorScore = (directorBoost[enrich.directorId] / maxDir) * 0.5;
+        }
+        (enrich.writerIds || []).forEach(wid => {
+          if (writerBoost[wid]) writerScore += (writerBoost[wid] / maxDir) * 0.15;
+        });
+        let kwSum = 0;
+        (enrich.keywordIds || []).forEach(kid => {
+          if (keywordBoost[kid]) kwSum += keywordBoost[kid] / maxKw;
+        });
+        keywordScore   = Math.min(kwSum * 0.15, 0.4);
+        runtimeFit     = runtimeFitScore(enrich.runtime, runtimePref);
+        budgetFit      = budgetFitScore(enrich.budget, budgetPref);
+        if (enrich.collectionId && franchiseIds.has(enrich.collectionId)) franchiseBonus = 0.6;
+      }
+
+      const totalScore = (
+        tmdbScore * srcWeight +
+        normGenre +
+        voteSignal +
+        recencyBoost +
+        directorScore +
+        writerScore +
+        keywordScore +
+        runtimeFit +
+        budgetFit +
+        franchiseBonus
+      ) * strategyMult;
+
+      return { ...m, _score: totalScore };
     })
     .filter(m => m._score > 0)
     .sort((a, b) => b._score - a._score);
@@ -397,6 +581,7 @@ export async function fetchCandidates(profile, page, langCode) {
   return applyDiversityBuffer(scored);
 }
 
+// ─── useRecommendations hook ──────────────────────────────────────────────────
 export function useRecommendations() {
   const {
     watched, watchlist, ratings, likedActors,
@@ -416,9 +601,30 @@ export function useRecommendations() {
   const profileRef = useRef(null);
   const pageRef    = useRef(1);
 
-  useEffect(() => {
-    profileRef.current = buildProfile(watched, watchlist, ratings, likedActors, dislikedIds, tvProgress);
+  // Enriches seed movies in the background — fills director/keyword/runtime data
+  // into the enrichment cache without blocking the initial render.
+  const enrichSeedsAsync = useCallback(async (seeds) => {
+    if (seeds.length === 0) return;
+    try {
+      // Fetch basic details (director, runtime, budget) for seeds not yet in cache
+      await fetchEnrichBatch(seeds.slice(0, 8));
+      // Then fetch keywords for seeds now in cache
+      const enrichable = seeds.filter(s => getEnrichEntry(s.id, s.media_type));
+      await Promise.all(
+        enrichable.slice(0, 5).map(s =>
+          fetchEnrichKeywords(s.id, s.media_type).catch(() => {})
+        )
+      );
+      // Rebuild profile with the newly enriched data
+      profileRef.current = buildProfile(watched, watchlist, ratings, likedActors, dislikedIds, tvProgress);
+    } catch {}
   }, [watched, watchlist, ratings, likedActors, dislikedIds, tvProgress]);
+
+  useEffect(() => {
+    const prof = buildProfile(watched, watchlist, ratings, likedActors, dislikedIds, tvProgress);
+    profileRef.current = prof;
+    enrichSeedsAsync(prof.seedMovies);
+  }, [watched, watchlist, ratings, likedActors, dislikedIds, tvProgress, enrichSeedsAsync]);
 
   const doLoad = useCallback(async (reset = false) => {
     if (loadingRef.current) return;
@@ -472,7 +678,6 @@ export function useRecommendations() {
     setTimeout(() => doLoad(true), 50);
   }, [watched, watchlist, ratings, likedActors, dislikedIds, tvProgress, doLoad]);
 
-  // Reset feed on language change
   useEffect(() => {
     profileRef.current = buildProfile(watched, watchlist, ratings, likedActors, dislikedIds, tvProgress);
     setItems([]);
