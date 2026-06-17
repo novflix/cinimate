@@ -1,93 +1,47 @@
 # Cinimate — Technical Documentation
 
-> Complete technical reference for the Cinimate web application.  
-> Version: 1.0.3 | Stack: React 19 + Supabase + TMDB API
+> Complete technical reference for the Cinimate web application.
+> Version: 0.9.5 Beta | Stack: React 19 + Vite + Supabase + TMDB API + Trakt API
 
 ---
 
 ## Table of Contents
 
-- [Cinimate — Technical Documentation](#cinimate--technical-documentation)
-  - [Table of Contents](#table-of-contents)
-  - [1. Architecture Overview](#1-architecture-overview)
-  - [2. Tech Stack](#2-tech-stack)
-  - [3. Project Structure](#3-project-structure)
-  - [4. Data Flow](#4-data-flow)
-    - [App Startup](#app-startup)
-    - [Save a Movie](#save-a-movie)
-    - [Language Switch](#language-switch)
-  - [5. Authentication System](#5-authentication-system)
-  - [6. State Management](#6-state-management)
-    - [State Slices](#state-slices)
-    - [Normalized Movie Shape](#normalized-movie-shape)
-    - [Cloud Sync](#cloud-sync)
-  - [7. TMDB API Integration](#7-tmdb-api-integration)
-    - [Wrapper Functions](#wrapper-functions)
-    - [Multi-Page Fetching (Parallel)](#multi-page-fetching-parallel)
-    - [Image Sizes Used](#image-sizes-used)
-    - [Session Cache](#session-cache)
-    - [Streaming Links](#streaming-links)
-  - [8. Recommendation Algorithm](#8-recommendation-algorithm)
-    - [Phase 1: Build Taste Profile](#phase-1-build-taste-profile)
-      - [Signal Weights](#signal-weights)
-      - [Seed Selection](#seed-selection)
-    - [Phase 2: Fetch Candidates](#phase-2-fetch-candidates)
-    - [Phase 3: Scoring](#phase-3-scoring)
-    - [Refresh Behaviour](#refresh-behaviour)
-    - [Infinite Scroll](#infinite-scroll)
-  - [9. Search System](#9-search-system)
-    - [Search Pipeline](#search-pipeline)
-    - [Filter System](#filter-system)
-  - [10. Cloud Sync (Supabase)](#10-cloud-sync-supabase)
-    - [Supabase Client](#supabase-client)
-    - [Data Table](#data-table)
-    - [Row Level Security](#row-level-security)
-    - [Sync Strategy](#sync-strategy)
-  - [11. Localization System](#11-localization-system)
-    - [ThemeContext](#themecontext)
-    - [TMDB Localization](#tmdb-localization)
-    - [Saved List Localization](#saved-list-localization)
-  - [12. TV Series Tracker](#12-tv-series-tracker)
-    - [Data Shape](#data-shape)
-    - [UI Flow](#ui-flow)
-  - [13. Admin Panel](#13-admin-panel)
-  - [14. PWA \& iOS Support](#14-pwa--ios-support)
-    - [Apple Touch Icons](#apple-touch-icons)
-    - [Key PWA Meta Tags](#key-pwa-meta-tags)
-    - [Liquid Glass (iOS 26)](#liquid-glass-ios-26)
-  - [15. Performance Optimizations](#15-performance-optimizations)
-    - [React](#react)
-    - [Network](#network)
-    - [Canvas](#canvas)
-    - [CSS](#css)
-    - [Scroll](#scroll)
-  - [16. CSS Architecture \& Theming](#16-css-architecture--theming)
-    - [CSS Variables](#css-variables)
-    - [Layout](#layout)
-  - [17. Icon System](#17-icon-system)
-    - [Key Icon Mappings](#key-icon-mappings)
-  - [18. Seasonal \& Effects System](#18-seasonal--effects-system)
-    - [Season Detection](#season-detection)
-    - [Effects](#effects)
-  - [19. Build \& Deployment](#19-build--deployment)
-    - [Build](#build)
-    - [Deployment (Vercel)](#deployment-vercel)
-  - [20. Environment Variables](#20-environment-variables)
-  - [21. Database Schema](#21-database-schema)
-    - [Data Sizes (Estimated)](#data-sizes-estimated)
-  - [22. Custom Lists](#22-custom-lists)
-  - [23. About Page / Landing](#23-about-page--landing)
-  - [24. Vercel Deployment & SPA Routing](#24-vercel-deployment--spa-routing)
+- [1. Architecture Overview](#1-architecture-overview)
+- [2. Tech Stack](#2-tech-stack)
+- [3. Project Structure](#3-project-structure)
+- [4. Data Flow](#4-data-flow)
+- [5. Authentication System](#5-authentication-system)
+- [6. State Management](#6-state-management)
+- [7. TMDB API Integration](#7-tmdb-api-integration)
+- [8. Trakt API Integration](#8-trakt-api-integration)
+- [9. Recommendation Algorithm](#9-recommendation-algorithm)
+- [10. Search System](#10-search-system)
+- [11. Cloud Sync (Supabase)](#11-cloud-sync-supabase)
+- [12. Localization System](#12-localization-system)
+- [13. TV Series Tracker](#13-tv-series-tracker)
+- [14. Custom Lists](#14-custom-lists)
+- [15. Public Lists & Sharing](#15-public-lists--sharing)
+- [16. Admin Panel](#16-admin-panel)
+- [17. PWA & iOS Support](#17-pwa--ios-support)
+- [18. Performance Optimizations](#18-performance-optimizations)
+- [19. CSS Architecture & Theming](#19-css-architecture--theming)
+- [20. Icon System](#20-icon-system)
+- [21. Seasonal & Effects System](#21-seasonal--effects-system)
+- [22. About Page / Landing](#22-about-page--landing)
+- [23. Build & Deployment](#23-build--deployment)
+- [24. Environment Variables](#24-environment-variables)
+- [25. Database Schema](#25-database-schema)
 
 ---
 
 ## 1. Architecture Overview
 
-Cinimate is a **client-side React SPA** with no custom backend. All data lives in two external services:
+Cinimate is a **client-side React SPA** with no custom backend. All data lives in external services:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        Browser (React SPA)                   │
+│                     Browser (React SPA)                      │
 │                                                             │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────────┐  │
 │  │ AuthCtx  │  │StoreCtx  │  │ThemeCtx  │  │ AdminCtx  │  │
@@ -100,20 +54,23 @@ Cinimate is a **client-side React SPA** with no custom backend. All data lives i
 │  └─────────┘   └──────────┘                                 │
 └──────────────────────────┬──────────────────────────────────┘
                            │ HTTPS
-                ┌──────────┴──────────┐
-                │                     │
-          ┌─────▼──────┐      ┌───────▼──────┐
-          │  TMDB API  │      │   Supabase   │
-          │ (films DB) │      │  (user data) │
-          └────────────┘      └──────────────┘
+                ┌──────────┼──────────┐
+                │          │          │
+          ┌─────▼────┐ ┌──▼───┐ ┌───▼──────┐
+          │  TMDB    │ │Trakt │ │ Supabase │
+          │  API     │ │ API  │ │ (user    │
+          │ (films)  │ │(comm)│ │  data)   │
+          └──────────┘ └──────┘ └──────────┘
 ```
 
 **Key design decisions:**
 - Zero backend — reduces infrastructure cost and complexity
 - All movie data comes from TMDB API at runtime (no ETL, always fresh)
+- Community signal from Trakt API (related titles, no OAuth needed)
 - User data (watchlists, ratings) stored in Supabase PostgreSQL
 - Guest mode fully supported — localStorage only, no account required
 - All React Context, no Redux or Zustand — sufficient for this scale
+- Vite for fast dev server and optimized builds
 
 ---
 
@@ -122,13 +79,19 @@ Cinimate is a **client-side React SPA** with no custom backend. All data lives i
 | Layer | Technology | Version | Purpose |
 |-------|-----------|---------|---------|
 | UI Framework | React | 19.x | Component tree, hooks, rendering |
-| Build Tool | Create React App | 5.x | Webpack, Babel, dev server |
+| Build Tool | Vite | 6.x | Dev server, bundling, HMR |
+| Routing | react-router-dom | 7.x | Client-side routing with URL sync |
 | Auth + DB | Supabase | JS v2 | Authentication, PostgreSQL, realtime |
 | Movie Data | TMDB API | v3 | Films, TV shows, cast, images |
+| Community Data | Trakt API | v2 | Related titles for recommendations |
+| Image Hosting | Cloudinary | — | Avatar and list cover uploads |
 | Hosting | Vercel | — | Static file CDN, auto-deploy |
 | Icons | Solar Icon Set | 2.0.1 | UI icons (1200+ Linear style) |
+| I18n | i18next | 23.x | 9-language internationalization |
+| Flags | flag-icons | 7.x | Country flag icons for language picker |
 | Fonts | Google Fonts | — | Bebas Neue (headings), DM Sans (body) |
 | CSS | Vanilla CSS + CSS Variables | — | No CSS-in-JS, no Tailwind |
+| Testing | Vitest | 3.x | Configured but no tests written yet |
 
 ---
 
@@ -138,53 +101,71 @@ Cinimate is a **client-side React SPA** with no custom backend. All data lives i
 cinimate/
 ├── public/
 │   ├── index.html              # PWA meta tags, Apple touch icons
-│   ├── manifest.json           # Web app manifest
-│   └── apple-touch-icon*.png   # iOS home screen icons (6 sizes)
+│   └── manifest.json           # Web app manifest
 │
 ├── src/
-│   ├── App.js                  # Root: auth gate, routing, providers
-│   ├── index.js                # Entry point, global CSS imports
+│   ├── index.jsx               # Entry point, ErrorBoundary
+│   ├── App.jsx                 # Root: auth gate, routing, providers
 │   ├── index.css               # CSS variables, global styles, animations
 │   ├── liquid-glass.css        # iOS 26 Liquid Glass effects
 │   │
-│   ├── auth.js                 # AuthContext: Supabase auth wrapper
-│   ├── store.js                # StoreContext: app state + cloud sync
-│   ├── theme.js                # ThemeContext: dark/light, language
-│   ├── admin.js                # AdminContext: dev tools for admin user
-│   ├── supabase.js             # Supabase client singleton
-│   ├── api.js                  # TMDB API wrapper, getPages(), streaming links
-│   ├── useLocalizedMovies.js   # Hook: hydrates saved lists in current language
-│   ├── useSync.js              # Debounced cloud sync helper
+│   ├── auth.jsx                # AuthContext: Supabase auth + deleteAccount
+│   ├── store.jsx               # StoreContext: state + cloud sync + custom lists
+│   ├── theme.jsx               # ThemeContext: dark/light, language (i18n)
+│   ├── admin.jsx               # AdminContext: snow/season overrides
+│   ├── supabase.jsx            # Supabase client singleton
+│   ├── api.jsx                 # TMDB + Trakt API wrappers, streaming links
+│   ├── useLocalizedMovies.jsx  # Hook: hydrates saved lists in current language
+│   │
+│   ├── i18n/
+│   │   ├── index.jsx           # i18next config, 9 supported languages
+│   │   └── locales/            # en, ru, de, es, fr, it, pt, tr, zh
 │   │
 │   ├── components/
-│   │   ├── MovieCard.js/css    # Film poster card with save buttons
-│   │   ├── MovieModal.js/css   # Film detail sheet with full info
-│   │   ├── BottomNav.js/css    # Mobile tab bar (4 tabs)
-│   │   ├── SideNav.js/css      # Desktop sidebar (sticky)
-│   │   ├── ScrollRow.js/css    # Horizontal scroll + desktop arrows
-│   │   ├── RatingPrompt.js/css # Post-watch rating picker (animated)
-│   │   ├── Roulette.js/css     # Watchlist spin wheel
-│   │   ├── Countdown.js        # Live "in X days" badge
-│   │   ├── Confetti.js         # Canvas confetti on mark-watched
-│   │   ├── Particles.js/css    # Background particle field
-│   │   └── Effects.js/css      # SnowEffect, SparkBurst, FireParticles
+│   │   ├── MovieCard.jsx/css   # Poster card: actions, rating, TV progress, countdown
+│   │   ├── MovieModal.jsx/css  # Film detail: cast, crew, streaming, ratings, studios
+│   │   ├── BottomNav.jsx/css   # Mobile tab bar (4 tabs)
+│   │   ├── SideNav.jsx/css     # Desktop sidebar (sticky)
+│   │   ├── ScrollRow.jsx/css   # Horizontal scroll + desktop arrows
+│   │   ├── RatingPrompt.jsx/css# Animated post-watch rating picker
+│   │   ├── Roulette.jsx/css    # Watchlist spin wheel
+│   │   ├── Countdown.jsx       # Live "in X days" badge
+│   │   ├── Confetti.jsx        # Canvas confetti on mark-watched
+│   │   ├── Particles.jsx/css   # Background particle field
+│   │   ├── Effects.jsx/css     # SnowEffect, SparkBurst
+│   │   ├── SettingsModal.jsx/css# Theme, language, account, admin tools
+│   │   ├── DonateModal.jsx/css # Donation support modal
+│   │   ├── ShareCard.jsx/css   # Share card component
+│   │   └── Wordmark.jsx/css    # Brand wordmark logo
 │   │
 │   ├── hooks/
-│   │   ├── useDominantColor.js # Extracts accent color from poster image
-│   │   └── useSeason.js        # Current season detection + config
+│   │   ├── useRecommendations.jsx # 6-strategy recommendation algorithm (~712 lines)
+│   │   ├── useMovieModal.jsx      # Modal state synced with URL ?movie= param
+│   │   ├── useDominantColor.jsx   # Canvas-based dominant color extraction
+│   │   └── useSeason.jsx          # Season detection + themed genre config
 │   │
 │   └── pages/
-│       ├── Home.js/css         # Main feed: hero, mood filter, sections
-│       ├── Search.js/css       # Search + filters (genre, year, type, sort)
-│       ├── Recs.js/css         # Infinite recommendation feed
-│       ├── Profile.js/css      # User profile, lists, settings
-│       ├── ActorPage.js/css    # Actor bio + full filmography
-│       ├── AuthScreen.js/css   # Sign in / sign up / guest flow
-│       ├── About.js/css        # App info page (desktop only)
-│       └── CollectionPage.js   # Film collections / studios
+│       ├── Home.jsx/css        # Hero, 7 tabs, seasonal, public lists (~644 lines)
+│       ├── Search.jsx/css      # Search + filters + actor search (~813 lines)
+│       ├── Recs.jsx/css        # Infinite recommendation feed
+│       ├── Profile.jsx/css     # Profile, lists, roulette, list editor (~1090 lines)
+│       ├── About.jsx/css       # Landing page + desktop auth gate (~669 lines)
+│       ├── AuthScreen.jsx/css  # Sign in / sign up / guest flow
+│       ├── ActorPage.jsx/css   # Actor filmography
+│       ├── PersonPage.jsx/css  # Crew person page
+│       ├── SimilarPage.jsx/css # Similar titles (via Trakt + TMDB)
+│       ├── CollectionPage.jsx  # Film collections
+│       ├── PublicListPage.jsx/css # Public/shared list view
+│       ├── TermsOfService.jsx  # Legal: ToS
+│       ├── PrivacyPolicy.jsx   # Legal: Privacy
+│       ├── CommunityGuidelines.jsx # Legal: Community
+│       └── Notfound.jsx/css    # 404 page
 │
 ├── .env                        # Local env variables (not committed)
-├── package.json
+├── package.json                # Dependencies and scripts
+├── vite.config.js              # Vite config (port 3000, build → /build)
+├── vercel.json                 # SPA rewrites + security headers + CSP
+├── README.md
 └── TECHNICAL.md                # This file
 ```
 
@@ -195,17 +176,17 @@ cinimate/
 ### App Startup
 
 ```
-1. App.js mounts
-2. AuthProvider → supabase.auth.getSession() → sets user state
-3. If user logged in:
-   a. StoreProvider receives userId
-   b. loadFromCloud(userId) → fetches user_data from Supabase
-   c. Merges cloud data into localStorage
-4. If guest:
-   a. StoreProvider receives null userId
-   b. Loads from localStorage only
-5. Home page loads → fetches TMDB data (parallel)
-6. sessionStorage cache checked first (5min TTL)
+1. index.jsx mounts ErrorBoundary → App
+2. App wraps: ThemeProvider → AuthProvider → BrowserRouter → Root
+3. Root: checks auth state
+   a. user === undefined → loading spinner (waiting for getSession)
+   b. user === null, not skipped, not public route → AuthScreen
+   c. user === null, not skipped, desktop → About as landing + auth overlay
+   d. user === null, skipped → AppInner (guest mode)
+   e. user exists → AppInner
+4. StoreProvider receives userId → loadFromCloud(userId) → merges into localStorage
+5. AppInner: SideNav + Routes + BottomNav + Particles + SnowEffect
+6. Home page loads → fetches TMDB data in parallel → sessionStorage cache (5min TTL)
 ```
 
 ### Save a Movie
@@ -214,9 +195,10 @@ cinimate/
 User taps "Eye" button on MovieCard
   → handleWatched() fires
   → addToWatched(movie) in StoreContext
-  → watched[] state updated
-  → localStorage.setItem('watched', ...) (sync)
-  → pendingRating set → RatingPrompt appears
+  → watched[] state updated (normalized: {id, media_type, addedAt})
+  → localStorage.setItem('watched', ...) (sync, ~40 bytes per item)
+  → pendingRating set → RatingPrompt appears after 350ms
+  → showConfetti = true for 1400ms
   → After 1500ms debounce: syncToCloud() fires
   → supabase.from('user_data').upsert({...})
 ```
@@ -224,12 +206,12 @@ User taps "Eye" button on MovieCard
 ### Language Switch
 
 ```
-User toggles RU/EN in Settings
-  → ThemeContext.setLang('en')
-  → localStorage.setItem('lang', 'en')
-  → All components re-render via useTheme()
-  → useLocalizedMovies() detects lang change
-  → Re-fetches TMDB data with language=en-US
+User selects language in Settings
+  → ThemeContext.setLang('de')
+  → localStorage.setItem('lang', 'de')
+  → i18n.changeLanguage('de') → all t() calls update
+  → useLocalizedMovies() detects langCode change
+  → Re-fetches TMDB data with language=de-DE
   → Replaces titles/posters in saved lists
 ```
 
@@ -237,18 +219,19 @@ User toggles RU/EN in Settings
 
 ## 5. Authentication System
 
-**File:** `src/auth.js`
+**File:** `src/auth.jsx`
 
 Uses Supabase Auth v2 with email/password. No OAuth configured currently.
 
 ```javascript
 // AuthContext exports:
 {
-  user,        // Supabase User object | null | undefined (loading)
-  loading,     // boolean — auth operation in progress
-  signUp,      // (email, password) → { data, error }
-  signIn,      // (email, password) → { data, error }
-  signOut,     // () → void
+  user,           // Supabase User object | null | undefined (loading)
+  loading,        // boolean — auth operation in progress
+  signUp,         // (email, password) → { data, error }
+  signIn,         // (email, password) → { data, error }
+  signOut,        // () → void — clears all local data
+  deleteAccount,  // () → { error } — deletes user data from all tables + auth
 }
 ```
 
@@ -261,14 +244,17 @@ null      → not logged in (guest mode)
 User{}    → authenticated
 ```
 
-**Guest → Account migration:**  
+**Guest → Account migration:**
 When a guest user registers in Settings, `signUp()` is called. `onAuthStateChange` fires → `StoreProvider` receives the new `userId` → on first cloud load it finds empty cloud data → writes current localStorage data to cloud. All lists, ratings, and progress migrate automatically.
+
+**Account deletion:**
+Deletes user data from known tables (`watchlist`, `ratings`, `lists`, `list_items`, `profiles`, `user_settings`), calls `supabase.rpc('delete_user')`, clears all local storage, and signs out.
 
 ---
 
 ## 6. State Management
 
-**File:** `src/store.js`
+**File:** `src/store.jsx`
 
 Single React Context (`StoreContext`) holds all app state. The context value is memoized with `useMemo` to prevent unnecessary re-renders.
 
@@ -276,256 +262,383 @@ Single React Context (`StoreContext`) holds all app state. The context value is 
 
 | Slice | Type | Description |
 |-------|------|-------------|
-| `watched` | `Movie[]` | Films/shows marked as watched |
+| `watched` | `Movie[]` | Films/shows marked as watched (slim: id + media_type + addedAt) |
 | `watchlist` | `Movie[]` | Films/shows queued to watch |
-| `ratings` | `{ [id]: 1-10 }` | User ratings by movie ID |
+| `sortedWatchlist` | `Movie[]` | Watchlist with pinned items first |
+| `ratings` | `{ [id]: { score, ratedAt } }` | User ratings by movie ID |
 | `profile` | `{ name, avatar, bio }` | User profile data |
-| `likedActors` | `{ [id]: Actor }` | Actors the user liked |
+| `likedActors` | `{ [id]: { id, name, profile_path } }` | Actors the user liked |
 | `dislikedIds` | `number[]` | Movie IDs hidden from recommendations |
-| `tvProgress` | `{ [id]: { season, episode, totalSeasons } }` | Series watch progress |
+| `tvProgress` | `{ [id]: { season, episode, totalSeasons, episodesInSeason } }` | Series watch progress |
 | `customLists` | `{ [listId]: CustomList }` | User-created custom lists |
-| `pendingRating` | `Movie | null` | Triggers RatingPrompt overlay |
+| `pinnedIds` | `number[]` | Pinned watchlist item IDs |
+| `pendingRating` | `Movie \| null` | Triggers RatingPrompt overlay |
 | `showConfetti` | `boolean` | Triggers confetti animation |
+| `syncing` | `boolean` | Cloud sync in progress indicator |
 
-### Normalized Movie Shape
+### Normalized Movie Shape (Slim Storage)
 
 ```typescript
 interface NormalizedMovie {
   id: number;
   media_type: 'movie' | 'tv';
-  poster_path: string | null;
-  backdrop_path: string | null;
-  vote_average: number;
-  vote_count: number;
-  popularity: number;
-  genre_ids: number[];
-  release_date: string | null;
-  first_air_date: string | null;
-  _fallback_title: string;
+  addedAt: number;  // unix ms — powers temporal decay in recommendations
 }
 ```
 
-All movies are normalized via `normalize()` before storage to keep saved data lean (no unnecessary TMDB fields).
+All movies are normalized via `normalize()` before storage. This reduces ~350 bytes per item to ~40 bytes (~89% savings). Display data (title, poster, etc.) is fetched from TMDB via `useLocalizedMovies`.
 
 ### Cloud Sync
 
 ```javascript
 // Debounced 1500ms after any state change
+// cloudLoaded guard prevents empty state from overwriting cloud data
 syncToCloud(userId, {
   watched, watchlist, ratings, profile,
-  liked_actors, disliked_ids, tv_progress, custom_lists
+  liked_actors, disliked_ids, tv_progress, custom_lists, pinned_ids
 })
 // → supabase.from('user_data').upsert(...)
 ```
 
 localStorage is always written synchronously; Supabase is written with debounce to avoid excessive API calls.
 
+### Data Loss Protection
+
+Before syncing, the store checks whether local state is meaningful:
+```javascript
+const hasAnyData = watched.length > 0 || watchlist.length > 0 || ...
+if (!hasAnyData) {
+  // Check if cloud has data — if yes, DON'T overwrite with empty state
+  const { data: cloudRow } = await supabase.from('user_data').select('user_id')...
+  if (cloudRow) return; // cloud has data, don't overwrite
+}
+```
+
 ---
 
 ## 7. TMDB API Integration
 
-**File:** `src/api.js`
+**File:** `src/api.jsx`
 
-**Base URL:** `https://api.themoviedb.org/3`  
-**Auth:** Bearer token in `Authorization` header  
+**Base URL:** `https://api.themoviedb.org/3`
+**Auth:** Bearer token in `Authorization` header
 **Image CDN:** `https://image.tmdb.org/t/p/`
 
 ### Wrapper Functions
 
 ```javascript
-tmdb.trending(type, window)     // GET /trending/{type}/{window}
-tmdb.popular(type, pages)       // GET /{type}/popular (multi-page)
-tmdb.topRated(type, pages)      // GET /{type}/top_rated
-tmdb.nowPlaying(pages)          // GET /movie/now_playing
-tmdb.upcoming(pages)            // GET /movie/upcoming
+tmdb.trending(type, window)        // GET /trending/{type}/{window}
+tmdb.popular(type, pages)          // GET /{type}/popular (multi-page)
+tmdb.topRated(type, pages)         // GET /{type}/top_rated
+tmdb.nowPlaying(pages)             // GET /movie/now_playing
+tmdb.upcoming(pages)               // GET /movie/upcoming
 tmdb.discover(type, params, pages) // GET /discover/{type}
-tmdb.posterUrl(path, size)      // → full image URL
-tmdb.backdropUrl(path, size)    // → full backdrop URL
+tmdb.movieDetails(id)              // GET /movie/{id} + credits, videos, release_dates
+tmdb.tvDetails(id)                 // GET /tv/{id} + credits, videos, content_ratings
+tmdb.genres(type)                  // GET /genre/{type}/list
+tmdb.watchProviders(type, id)      // GET /{type}/{id}/watch/providers
+tmdb.similar(type, id)             // GET /{type}/{id}/recommendations
+tmdb.search(query)                 // GET /search/multi
+tmdb.posterUrl(path, size)         // → full image URL
+tmdb.posterUrlLarge(path)          // → w780 for modal
+tmdb.backdropUrl(path, size)       // → full backdrop URL
+tmdb.actorUrl(path, size)          // → w185 for actor thumbnails
 ```
 
 ### Multi-Page Fetching (Parallel)
 
 ```javascript
-const getPages = async (path, params, pages = 2) => {
-  // Fetch page 1 first to get total_pages
+const getPages = async (path, params, pages = 3) => {
   const first = await get(path, { ...params, page: 1 });
   const total = Math.min(pages, first.total_pages || 1);
-  
-  // Fetch remaining pages IN PARALLEL
   const rest = await Promise.all(
     Array.from({ length: total - 1 }, (_, i) =>
-      get(path, { ...params, page: i + 2 })
+      get(path, { ...params, page: i + 2 }).catch(() => ({ results: [] }))
     )
   );
-  
-  return [...first.results, ...rest.flatMap(d => d.results)];
+  return raw.filter(m => { if (seen.has(m.id)) return false; seen.add(m.id); return true; });
 };
 ```
 
-Pages are fetched in parallel (not sequential) — this cuts load time from `N × latency` to `1 × latency + overhead`.
+Pages are fetched in parallel — cuts load time from `N × latency` to `1 × latency + overhead`.
 
 ### Image Sizes Used
 
 | Context | Size | Dimensions |
 |---------|------|-----------|
-| Card poster | `w500` | ~342×513px |
+| Card poster | `w342` | ~342×513px |
 | Modal main poster | `w780` | ~780×1170px |
 | Backdrop | `w1280` | ~1280×720px |
-| Cast photos | `w342` | ~342×513px |
-| Actor photo | `w500` | ~500×750px |
+| Cast/crew photos | `w185` | ~185×278px |
+| Actor thumbnails | `w185` | ~185×278px |
 | Streaming logos | `w92` | ~92×92px |
 
 ### Session Cache
 
 Home page results are cached in `sessionStorage` for 5 minutes:
 ```javascript
-const key = 'cinimate_home_cache_v1_' + lang;
+const key = 'cinimate_home_cache_v5_' + lang;
 // TTL: Date.now() - ts > 5 * 60 * 1000
 ```
 
-This prevents refetching on tab switch or navigation back to home.
+Movie/TV details are cached in-memory for the session:
+```javascript
+const _detailsCache = new Map();
+// Key: `movie_${id}_${lang}` or `tv_${id}_${lang}`
+```
+
+### Enrichment Cache
+
+Lightweight metadata extracted from detail calls for the recommendation algorithm:
+```javascript
+const _enrichCache = new Map();
+// Key: `${mediaType}_${id}`
+// Value: { directorId, directorName, writerIds, keywordIds, runtime, collectionId, budget }
+```
+
+Populated lazily when MovieModal loads details — zero extra API calls.
 
 ### Streaming Links
 
 ```javascript
 const STREAMING_LINKS = {
-  8:    'Netflix',
-  9:    'Amazon Prime',
-  337:  'Disney+',
-  350:  'Apple TV+',
-  384:  'Max',
-  1899: 'Max',
-  15:   'Hulu',
-  531:  'Paramount+',
-  283:  'Crunchyroll',
-  192:  'YouTube',
-  555:  'Okko',
-  505:  'IVI',
-  635:  'Kinopoisk',
+  8:    { name: 'Netflix',      url: 'https://www.netflix.com/search?q=' },
+  9:    { name: 'Amazon Prime', url: 'https://www.amazon.com/s?k=' },
+  337:  { name: 'Disney+',      url: 'https://www.disneyplus.com/search/' },
+  350:  { name: 'Apple TV+',    url: 'https://tv.apple.com/search/' },
+  384:  { name: 'HBO Max',      url: 'https://play.max.com/search/' },
+  1899: { name: 'Max',          url: 'https://play.max.com/search/' },
+  15:   { name: 'Hulu',         url: 'https://www.hulu.com/search?q=' },
+  531:  { name: 'Paramount+',   url: 'https://www.paramountplus.com/search/' },
+  283:  { name: 'Crunchyroll',  url: 'https://www.crunchyroll.com/search?q=' },
+  555:  { name: 'Okko',         url: 'https://okko.tv/search?query=' },
+  505:  { name: 'IVI',          url: 'https://www.ivi.ru/search/?q=' },
+  635:  { name: 'Kinopoisk',    url: 'https://www.kinopoisk.ru/index.php?kp_query=' },
 };
+```
+
+### Content Filtering
+
+The API layer aggressively filters non-movie content:
+- **Genre exclusion:** News (10763), Reality (10764), Talk Show (10767)
+- **Title pattern matching:** Awards shows, late-night shows, talk shows, short films, behind-the-scenes
+- **Junk TV types:** miniseries_special, talk_show, news, reality
+- **Runtime filter:** Movies < 40 minutes excluded (shorts, one-shots)
+- **Vote count floor:** Movies with < 20 votes excluded
+
+---
+
+## 8. Trakt API Integration
+
+**File:** `src/api.jsx`
+
+Free API (Client ID only, no OAuth needed for public endpoints).
+
+```javascript
+const TRAKT_CLIENT_ID = import.meta.env.VITE_TRAKT_CLIENT_ID;
+const TRAKT_BASE = 'https://api.trakt.tv';
+const TRAKT_HEADERS = {
+  'Content-Type': 'application/json',
+  'trakt-api-version': '2',
+  'trakt-api-key': TRAKT_CLIENT_ID || '',
+};
+```
+
+### Functions
+
+```javascript
+// Convert TMDB id → Trakt slug via /search endpoint
+traktFindByTmdbId(tmdbId, type, signal) → { movie: {ids}, show: {ids} } | null
+
+// Get related titles from Trakt for a given TMDB id + type
+traktRelated(tmdbId, type, signal) → [{ tmdb_id, title, year, type }]
+
+// Batch: get Trakt related for multiple seeds at once
+traktRelatedBatch(seeds, signal) → flat array of unique TMDB ids
+```
+
+### Session Cache
+
+```javascript
+const _traktCache = new Map();
+const TRAKT_CACHE_MAX = 100;
+// Evicts oldest entry when full
 ```
 
 ---
 
-## 8. Recommendation Algorithm
+## 9. Recommendation Algorithm
 
-**File:** `src/pages/Recs.js`
+**File:** `src/hooks/useRecommendations.jsx` (~712 lines)
 
-The algorithm runs entirely client-side and consists of two phases: **Profile Building** and **Candidate Fetching**.
+The algorithm runs entirely client-side and consists of three phases: **Profile Building**, **Candidate Fetching**, and **Scoring**.
 
 ### Phase 1: Build Taste Profile
 
 ```
-buildProfile(watched, watchlist, ratings, likedActors, dislikedIds)
-  → { seedMovies, likedActorIds, genreBoost, avoidIds }
+buildProfile(watched, watchlist, ratings, likedActors, dislikedIds, tvProgress)
+  → {
+      seedMovies, likedActorIds,
+      genreBoost, directorBoost, writerBoost, keywordBoost,
+      topDirectors, topKeywords,
+      runtimePref, budgetPref, franchiseIds,
+      avoidIds, minYear, preferRecent, medianYear,
+      animeInterest, eastAsianInterest,
+      explorationGenres
+    }
 ```
 
 #### Signal Weights
 
-| Signal | Seed Weight | Genre Boost |
-|--------|-------------|-------------|
-| Rating 9–10 | **5.0** (×2 via /similar) | +2.5 |
-| Rating 8 | **3.5** | +1.5 |
-| Rating 7 | **2.0** | +0.8 |
-| Rating 5–6 | **0.4** | none |
-| Rating 4 | skip | none |
-| Rating 1–3 | skip | penalty only if 2+ bad |
-| Unrated watched | **0.8** | +0.3 |
-| Watchlist | **2.0** | +1.2 |
+| Signal | Seed Weight | Genre Boost | Notes |
+|--------|-------------|-------------|-------|
+| Rating 9-10 | **4.0** | +2.5 × decay | Strongest positive signal |
+| Rating 7-8 | **2.5** | +1.2 × decay | Good positive signal |
+| Rating 5-6 | **0.4** | none | Neutral — low seed weight |
+| Rating 1-4 | skip | -1.2 to -2.5 | Genre penalty only |
+| Unrated watched | **0.8** | +0.3 | Mild positive |
+| Watchlist | **1.2** | +0.6 | Medium positive |
+| Disliked | skip | -1.5 per genre | Strong genre suppression |
 
-**Genre penalty logic:** A genre is only penalised if the user has rated **2+ films in that genre with score 1-3**. One bad rating is treated as a one-off — not a genre preference. This avoids the "disliked Iron Man 3 = hates all action movies" problem.
+**Temporal decay:** `e^(-λ·days)` where λ = 0.00075 (half-life ≈ 924 days). Recent ratings have more influence.
+
+**TV progress multiplier:** Finished shows get 1.4× weight.
+
+**Enrichment signals** (from detail cache):
+- Director boost: +weight per director
+- Writer boost: +weight × 0.4 per writer
+- Keyword boost: +weight × 0.8 per keyword
+- Runtime preference: short (<90min), medium, long (>130min)
+- Budget tier: indie (<$5M), mid, blockbuster (>$40M)
+- Franchise boost: +2.5 weight for high-rated franchise entries
 
 #### Seed Selection
-Top 10 positive seeds by weight. On each page load, seeds rotate using `(page - 1 + i) % seeds.length` so different pages show different recommendations.
+
+Top 15 positive seeds by weight, deduplicated. On each page load, seeds rotate using `(page - 1) % seeds.length` so different pages show different recommendations.
 
 ### Phase 2: Fetch Candidates
 
-Four parallel strategies per page:
+Six parallel strategies per page:
 
 ```
-Strategy 1: /recommendations endpoint
-  → For each of top 4 seeds
-  → TMDB returns "if you liked X, try these"
+Strategy 1: TMDB /recommendations
+  → Top 4 seeds rotated per page
+  → page cycles through 1-3 for variety
   → source_weight = seed.weight
 
-Strategy 1b: /similar endpoint  
-  → Only for seeds with strategy:'similar' (ratings 9-10)
-  → Finds structurally similar films (same director, themes)
-  → source_weight = seed.weight
+Strategy 1b: Trakt community picks (pages 1-3 only)
+  → traktRelatedBatch() for top 2 seeds
+  → Fetches TMDB details for each Trakt result
+  → source_weight = 1.8
 
-Strategy 2: Liked actor filmographies
-  → GET /person/{actorId}/movie_credits
-  → Top 20 by popularity, vote_average ≥ 5
-  → source_weight = 3.0
+Strategy 2: Actor + Director credits
+  → GET /person/{id}/combined_credits
+  → Rotates through liked actors + top directors
+  → Filters: poster exists, vote_average ≥ 5.5, vote_count ≥ 30
+  → source_weight = 3.5 (actor) / 3.0 (director)
 
-Strategy 3: Genre discover
-  → Top 2 boosted genres via /discover/movie + /discover/tv
-  → vote_count.gte=200, recent films preferred
-  → source_weight = 1.0 or 0.8
+Strategy 3: Genre-based discover
+  → Top 2-3 boosted genres via /discover/movie + /discover/tv
+  → Alternates sort: popularity vs vote_average
+  → vote_count.gte=400 (movies) / 100 (TV)
+  → source_weight = 1.2
 
-Strategy 4 (fallback): Trending
-  → Only when user has no taste data
-  → /trending/movie/week + /tv/top_rated
+Strategy 4: Exploration via secondary genres
+  → Cycles through 2nd-4th ranked genres
+  → vote_count.gte=500
+  → source_weight = 0.7
+
+Strategy 5: Keyword-based discover
+  → Top keywords from enrichment cache
+  → Alternates sort
+  → vote_count.gte=100
+  → source_weight = 1.4
+
+Strategy 6: Franchise / collection (pages 1-5 only)
+  → /collection/{id} for high-rated franchises
+  → All parts included
+  → source_weight = 2.5
 ```
 
 ### Phase 3: Scoring
 
 ```javascript
-// Bayesian average: penalises obscure films with few votes
-const bayesian = (voteAvg * voteCount + 6 * 100) / (voteCount + 100);
-
-// Genre alignment bonus
-let genreScore = sum(genreBoost[g] * 0.12 for g in movie.genre_ids);
-
-// Recency bonus: small reward for newer films
-const year = parseInt(movie.release_date.slice(0, 4));
-const recency = Math.max(0, (year - 2000) / 25) * 0.3;
-
-// Final score
-score = bayesian * source_weight + genreScore + recency;
+const totalScore = (
+  tmdbScore * srcWeight +        // TMDB rating normalized to 0-1
+  normGenre +                     // Normalized genre alignment (0-0.4)
+  voteSignal +                    // log10(vote_count) / 15
+  recencyBoost +                  // (releaseYear - 2000) / 400
+  directorScore +                 // Director match (0-0.5)
+  writerScore +                   // Writer match (0-0.15)
+  keywordScore +                  // Keyword match (0-0.4)
+  runtimeFit +                    // Runtime preference match
+  budgetFit +                     // Budget tier match
+  franchiseBonus                  // 0.6 for franchise entries
+) * strategyMult;                 // 0.85-1.6 depending on source
 ```
 
-**Bayesian average** prevents films with 9.8 from 12 votes from outranking films with 8.2 from 50,000 votes.
+### Diversity Buffer
+
+Prevents same-genre and same-type runs in the feed:
+- Max 3 consecutive same-genre items
+- Max 4 consecutive same-type (movie/TV) items
+- 12% of slots reserved for exploration (secondary genres)
+
+### Origin Filter
+
+- Anime (Japan) shown only if user has ≥ 2 Japanese titles in history
+- East Asian content (KR, CN, TW, HK, TH) shown only if user has interest, OR if the title is highly acclaimed (rating ≥ 8.2, votes ≥ 2000)
 
 ### Refresh Behaviour
 
 Each press of the refresh button increments `pageOffset` by a random 1-4:
 ```javascript
-const newOffset = (current + random(1-4)) % 10;
-pageRef.current = 1 + newOffset;
+const newOffset = (current + Math.floor(Math.random() * 4) + 1) % 10;
 ```
-
-This pulls a different page from TMDB, showing different results while staying relevant.
 
 ### Infinite Scroll
 
-Uses a scroll event listener mounted once (`[]` deps) that reads state via refs:
+Uses IntersectionObserver on a sentinel element:
 ```javascript
-const scrollEl = loaderRef.current?.closest('.app-content') || window;
-scrollEl.addEventListener('scroll', checkScroll, { passive: true });
-
-// checkScroll reads hasMoreRef.current and doLoadRef.current
-// (never stale, never re-mounts)
+const obs = new IntersectionObserver(
+  entries => { if (entries[0].isIntersecting && !loadingRef.current) doLoad(false); },
+  { root: scrollRoot, rootMargin: '600px' }
+);
 ```
 
 ---
 
-## 9. Search System
+## 10. Search System
 
-**File:** `src/pages/Search.js`
+**File:** `src/pages/Search.jsx` (~813 lines)
 
 ### Search Pipeline
 
 ```
 User types query
-  → 350ms debounce
-  → enhancedSearch(query, langCode, filters)
-    1. /search/movie + /search/tv (parallel)
-    2. Year detection: "Spider-Man 2023" → year=2023, query="Spider-Man"
-    3. Keyword fallback: /search/keyword → /discover/movie?with_keywords=
-    4. Apply client-side filters (genre, year range)
-    5. Sort by selected sort option
+  → 300ms debounce
+  → enhancedSearch(query, langCode, filters, page, signal)
+    1. /search/multi (primary — covers movies + TV + persons)
+    2. /search/movie + /search/tv (supplementary, page 1 only)
+    3. English fallback: /search/multi?language=en-US (if non-English UI)
+    4. Year detection: "Dune 2023" → year=2023, query="Dune"
+    5. Deduplicate by (id, media_type)
+    6. Apply client-side filters (genre, year range, type)
+    7. Sort by selected sort option or relevance score
   → setResults(arr)
+```
+
+### Title Match Scoring
+
+```
+Tier 6: Exact match on any title variant     → 50,000 base
+Tier 5: Prefix match (query + space)         → 20,000 base
+Tier 4: Starts with query                    →  8,000 base
+Tier 3: Word-boundary match                  →  3,000 base
+Tier 2: Substring match (≥4 chars)           →  1,000 base
+Tier 1: Short substring match                →    200 base
+
+Boosted by: popularity (log scale), vote count, rating, recency
 ```
 
 ### Filter System
@@ -534,45 +647,34 @@ User types query
 |--------|---------|-----------|
 | Type | All / Movies / Series | determines endpoint |
 | Sort | Popularity / Rating / Newest / Oldest | `sort_by` |
-| Year | 5 preset ranges | `primary_release_date.gte/lte` |
+| Year | 5 preset ranges (2020-now, 2010s, 2000s, 1990s, pre-1990) | `primary_release_date.gte/lte` |
 | Genre | 14 genres (multi-select) | `with_genres` |
 
-When **no query but filters set**, uses `/discover` directly for browsing.
+### Actor Search
 
-When **query + filters**, fetches by text search then filters client-side.
+Separate tab searches `/search/person`, filters to acting department, sorts by watched-film overlap count.
 
 ---
 
-## 10. Cloud Sync (Supabase)
+## 11. Cloud Sync (Supabase)
 
-**File:** `src/store.js`, `src/supabase.js`
+**Files:** `src/store.jsx`, `src/supabase.jsx`
 
 ### Supabase Client
 
 ```javascript
-// src/supabase.js
+// src/supabase.jsx
 import { createClient } from '@supabase/supabase-js';
 export const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_KEY
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_KEY
 );
 ```
 
-### Data Table
+### Data Tables
 
-```sql
-create table public.user_data (
-  user_id      uuid primary key references auth.users(id) on delete cascade,
-  watched      jsonb default '[]',
-  watchlist    jsonb default '[]',
-  ratings      jsonb default '{}',
-  profile      jsonb default '{}',
-  liked_actors jsonb default '{}',
-  disliked_ids jsonb default '[]',
-  tv_progress  jsonb default '{}',
-  updated_at   timestamptz default now()
-);
-```
+**user_data** — per-user state (see Database Schema section)
+**public_lists** — shared lists (see Public Lists section)
 
 ### Row Level Security
 
@@ -586,32 +688,58 @@ create policy "Users manage own data"
 
 ### Sync Strategy
 
-- **Load:** On login, `loadFromCloud()` fetches once and overwrites localStorage
-- **Save:** `syncToCloud()` debounced 1500ms — batches rapid changes (e.g. rate movie → triggers one write, not many)
-- **Conflict resolution:** Last-write-wins. Cloud always wins on login.
+- **Load:** On login, `loadFromCloud()` fetches once and merges into localStorage
+- **Save:** `syncToCloud()` debounced 1500ms — batches rapid changes
+- **Conflict resolution:** Cloud always wins on login; last-write-wins for concurrent edits
+- **Guard:** Empty local state never overwrites existing cloud data
 
 ---
 
-## 11. Localization System
+## 12. Localization System
 
-**File:** `src/theme.js`, `src/useLocalizedMovies.js`
+**Files:** `src/theme.jsx`, `src/useLocalizedMovies.jsx`, `src/i18n/`
+
+### Supported Languages
+
+| Code | Language | Country Code | TMDB Code |
+|------|----------|-------------|-----------|
+| en | English | gb | en-US |
+| ru | Русский | ru | ru-RU |
+| de | Deutsch | de | de-DE |
+| es | Español | es | es-ES |
+| fr | Français | fr | fr-FR |
+| it | Italiano | it | it-IT |
+| pt | Português | pt | pt-BR |
+| tr | Türkçe | tr | tr-TR |
+| zh | 中文 | cn | zh-CN |
+
+### i18n Setup
+
+```javascript
+// src/i18n/index.jsx
+i18n.use(initReactI18next).init({
+  resources: { ru, en, es, fr, de, pt, it, tr, zh },
+  lng: localStorage.getItem('lang') || 'en',
+  fallbackLng: 'en',
+});
+```
 
 ### ThemeContext
 
 ```javascript
-const { lang, setLang } = useTheme();
-// lang: 'ru' | 'en'
-
-// Translation helper
-t(lang, 'Русский текст', 'English text')
+const { theme, setTheme, lang, setLang } = useTheme();
+// theme: 'dark' | 'light'
+// lang: 'en' | 'ru' | 'de' | 'es' | 'fr' | 'it' | 'pt' | 'tr' | 'zh'
 ```
 
 ### TMDB Localization
 
-The `Accept-Language` header is set based on `lang`:
+The `language` query param is set based on `lang`:
 ```javascript
-const langCode = lang === 'en' ? 'en-US' : 'ru-RU';
-// Passed to all TMDB requests
+const TMDB_LANG_MAP = {
+  ru: 'ru-RU', en: 'en-US', es: 'es-ES', fr: 'fr-FR',
+  de: 'de-DE', pt: 'pt-BR', it: 'it-IT', tr: 'tr-TR', zh: 'zh-CN',
+};
 ```
 
 ### Saved List Localization
@@ -621,19 +749,18 @@ const langCode = lang === 'en' ? 'en-US' : 'ru-RU';
 ```javascript
 // Two-level cache:
 // 1. In-memory Map (instantaneous)
-// 2. localStorage key 'cinimate_localized_cache_v2' (persists across sessions)
+// 2. localStorage key 'tmdb_locale_cache' (max 300 entries, persists across sessions)
 
 // Batch size: 10 concurrent requests
 // Debounced localStorage write: 2000ms
+// Stable entriesKey prevents infinite loops on re-render
 ```
-
-Items in lists are stored with `_fallback_title` (original title at save time). If localized data is unavailable, falls back gracefully.
 
 ---
 
-## 12. TV Series Tracker
+## 13. TV Series Tracker
 
-**Files:** `src/store.js`, `src/components/MovieModal.js`, `src/components/MovieCard.js`
+**Files:** `src/store.jsx`, `src/components/MovieModal.jsx`, `src/components/MovieCard.jsx`
 
 ### Data Shape
 
@@ -642,6 +769,7 @@ interface TvProgress {
   season: number;
   episode: number;
   totalSeasons: number;
+  episodesInSeason: number | null;  // fetched from TMDB season endpoint
 }
 // Stored as: tvProgress[movieId] = TvProgress
 ```
@@ -650,36 +778,154 @@ interface TvProgress {
 
 1. User adds a series to Watchlist
 2. **In modal:** "Track progress" button appears (only for `media_type === 'tv'` AND `inList === true`)
-3. Tapping opens a `RatingPrompt`-style panel with `±` counters for season and episode
-4. On save: `setTvProgressEntry(id, { season, episode, totalSeasons })` → store → localStorage → cloud
-5. **On card:** golden `S2·E7` badge + progress bar rendered at poster bottom
-6. **In Profile queue:** shows show is in "Watching" section (distinct from regular queue items)
+3. Tapping opens inline editor with season/episode steppers
+4. Episode count fetched from TMDB `/tv/{id}/season/{n}` (cached per session)
+5. On save: `setTvProgressEntry(id, { season, episode, totalSeasons, episodesInSeason })`
+6. **On card:** `S2·E7` badge + progress bar at poster bottom
+7. **In Profile queue:** show appears in "Currently Watching" section (separate from regular queue)
+8. Finished detection: `season >= totalSeasons && episode >= episodesInSeason`
 
 ---
 
-## 13. Admin Panel
+## 14. Custom Lists
 
-**File:** `src/admin.js`
+**Files:** `src/pages/Profile.jsx`, `src/store.jsx`
 
-Controlled by `REACT_APP_ADMIN_ID` environment variable. If the logged-in user's Supabase UUID matches, `isAdmin = true`.
+Custom Lists allow users to create curated collections beyond the built-in Watchlist/Watched.
+
+### Data Shape
+
+```typescript
+interface CustomList {
+  id: string;                    // "list_1712345678901"
+  name: string;
+  description: string;
+  image: string | null;          // Cloudinary URL (user upload)
+  items: NormalizedMovie[];
+  createdAt: number;             // Date.now()
+  showProgress: boolean;         // show watched/total progress bar
+  deadline: string | null;       // ISO date string "2025-12-31"
+  isPublic: boolean;             // visible in public_lists table
+  isSiteList: boolean;           // admin-curated list
+  separateTracking: boolean;     // per-list watched/watchlist
+  listWatched: NormalizedMovie[];// per-list watched (when separateTracking)
+  listWatchlist: NormalizedMovie[];// per-list queue
+  isOwned: boolean;              // false for copied lists
+  authorName: string | null;
+  sourceListId: string | null;   // original list ID if copied
+  sourceAuthorName: string | null;
+}
+```
+
+### Store Operations
 
 ```javascript
-const ADMIN_ID = process.env.REACT_APP_ADMIN_ID || null;
+createCustomList(name, description, image, opts)  // → returns id
+deleteCustomList(listId)                           // removes from state + public_lists
+renameCustomList(listId, name)                     // rename (ownership check)
+promoteCustomListOwnership(listId)                 // take ownership of copied list
+addToCustomList(listId, movie)                     // adds if not duplicate
+removeFromCustomList(listId, movieId)              // removes by movie id
+isInCustomList(listId, movieId)                    // boolean check
+updateListMeta(listId, meta)                       // patches name/desc/image/opts
+
+// Per-list tracking (separateTracking mode)
+addToListWatched(listId, movie)
+removeFromListWatched(listId, movieId)
+addToListWatchlist(listId, movie)
+removeFromListWatchlist(listId, movieId)
+isListWatched(listId, movieId)
+isListInWatchlist(listId, movieId)
+```
+
+### Progress Calculation
+
+Progress is computed at render time by cross-referencing list items against the `watched[]` slice (or `listWatched` when `separateTracking` is on):
+
+```javascript
+const watchedCount = list.separateTracking
+  ? list.items.filter(m => isListWatched(listId, m.id)).length
+  : list.items.filter(m => isWatched(m.id)).length;
+const pct = total > 0 ? Math.round((watchedCount / total) * 100) : 0;
+```
+
+### List Edit Page
+
+`ListEditPage` handles both create and edit flows:
+- **Create:** `listId = null` → `createCustomList()` on save
+- **Edit:** `listId = existingId` → pre-fills state, calls `updateListMeta()` on save
+- **Read-only:** copied lists show a "Copy list" button to take ownership
+
+### List Detail Page
+
+- Shows progress bar + deadline if configured
+- Each poster has action buttons (Watched/Watchlist) — global or per-list depending on `separateTracking`
+- Edit button navigates to `ListEditPage`
+- Share button upserts to `public_lists` and copies share link
+- Title picker modal for adding movies/TV shows
+
+---
+
+## 15. Public Lists & Sharing
+
+**Files:** `src/pages/PublicListPage.jsx`, `src/pages/Profile.jsx`, `src/pages/Home.jsx`
+
+### public_lists Table
+
+```sql
+create table if not exists public.public_lists (
+  id            text primary key,       -- matches customLists key
+  user_id       uuid references auth.users(id) on delete set null,
+  name          text not null,
+  description   text default '',
+  image         text,                   -- Cloudinary URL
+  items         jsonb not null default '[]'::jsonb,
+  author_name   text,
+  likes         integer default 0,
+  is_public     boolean default true,
+  is_site_list  boolean default false,
+  updated_at    timestamptz default now()
+);
+```
+
+### Visibility Rules
+
+- **Site Lists** (`is_site_list = true`): always public, shown on Home page, author is "CiniMate"
+- **User Public Lists** (`is_public = true`, `likes >= 100`): shown on Home page
+- **Private Lists** (`is_public = false`): only accessible via direct link if the user knows the ID
+
+### Sharing Flow
+
+1. User clicks "Share" on a list detail page
+2. Upserts list snapshot to `public_lists` table
+3. Copies share URL to clipboard: `{origin}/list/{listId}`
+4. Recipient opens `/list/:listId` — accessible without auth
+5. If logged in, can add the list to their own custom lists (creates a copy)
+
+---
+
+## 16. Admin Panel
+
+**File:** `src/admin.jsx`
+
+Controlled by `VITE_ADMIN_ID` environment variable. If the logged-in user's Supabase UUID matches, `isAdmin = true`.
+
+```javascript
+const ADMIN_ID = import.meta.env.VITE_ADMIN_ID || null;
 const isAdmin = !!(ADMIN_ID && userId === ADMIN_ID);
 ```
 
-**Admin-only settings visible in Settings modal:**
-
-| Control | Description |
-|---------|-------------|
-| ❄️ Snow | Force snow effect regardless of month |
-| 🗓 Season | Override detected season (Auto / Halloween / New Year / Summer / Winter / Spring / Autumn) |
+**Admin-only features:**
+- Force snow effect regardless of month
+- Override detected season (Auto / Halloween / New Year / Summer / Winter / Spring / Autumn)
+- Publish "Site Lists" visible on Home page
+- Access to Popular Lists tab on Home
 
 Settings persist in `localStorage` under `cinimate_admin_overrides`.
 
 ---
 
-## 14. PWA & iOS Support
+## 17. PWA & iOS Support
 
 **Files:** `public/index.html`, `public/manifest.json`, `src/liquid-glass.css`
 
@@ -725,35 +971,39 @@ Applied to: bottom nav, modals, rating prompt, settings, roulette, hero labels.
 
 ---
 
-## 15. Performance Optimizations
+## 18. Performance Optimizations
 
 ### React
 
 | Optimization | Applied To | Effect |
 |-------------|-----------|--------|
-| `React.memo` | MovieCard, BottomNav, SideNav, MovieModal, RatingPrompt, ScrollRow | Skip re-render if props unchanged |
-| `useCallback` | MovieCard handlers, Search filter callbacks | Stable function references |
-| `useMemo` | StoreContext value, allSaved in Recs | Avoid object recreation |
+| `React.memo` | MovieCard, BottomNav, SideNav, MovieModal, RatingPrompt, ScrollRow, SectionRow, FeatureCard, StepCard | Skip re-render if props unchanged |
+| `useCallback` | MovieCard handlers, Search filter callbacks, store mutations | Stable function references |
+| `useMemo` | StoreContext value, localized lists, preview entries | Avoid object recreation |
 | Memoized context | StoreContext | All consumers skip render if state unchanged |
 
 ### Network
 
 | Optimization | Description |
 |-------------|-------------|
-| Parallel `getPages` | TMDB multi-page fetches run concurrently, not sequentially |
+| Parallel `getPages` | TMDB multi-page fetches run concurrently |
 | Session cache | Home page data cached in sessionStorage (5min TTL) |
+| Details cache | Movie/TV detail calls cached in-memory for session |
+| Enrichment cache | Recommendation metadata extracted lazily from detail calls |
+| Trakt cache | Trakt API responses cached (max 100 entries) |
 | Debounced sync | Cloud writes batched with 1500ms debounce |
 | Debounced localStorage | Localization cache writes batched with 2000ms debounce |
 | Batch size 10 | useLocalizedMovies fetches 10 items concurrently |
-| Pages 2 not 3 | Home sections fetch 2 pages = 40 items (was 3 = 60) |
+| Search cache | Session-level search results cached (max 60 entries) |
+| Poster size w342 | ~40% less bandwidth than w500 for card posters |
 
 ### Canvas
 
 | Optimization | Description |
 |-------------|-------------|
-| Particles: 28 not 55 | Fewer particles, less GPU work |
+| Particles: 28 | Fewer particles, less GPU work |
 | 30fps cap | Both particle and snow effects capped via `ts - last < 33` |
-| Snow: 30 not 60 flakes | Half the draw calls |
+| Snow: 30 flakes | Half the draw calls |
 | `visibilitychange` pause | Canvas loops stop when tab is hidden |
 
 ### CSS
@@ -764,13 +1014,13 @@ Applied to: bottom nav, modals, rating prompt, settings, roulette, hero labels.
 content-visibility: auto;                     /* Skip off-screen renders */
 ```
 
-### Scroll
+### Infinite Scroll
 
-Infinite scroll uses a single scroll event listener mounted once, reading state via refs — avoids the re-mount/re-subscribe cycle that caused the previous double-trigger bug.
+IntersectionObserver on a sentinel element with `rootMargin: '600px'` — preloads before the user reaches the bottom. Uses `loadingRef` to prevent concurrent loads.
 
 ---
 
-## 16. CSS Architecture & Theming
+## 19. CSS Architecture & Theming
 
 ### CSS Variables
 
@@ -802,9 +1052,9 @@ Infinite scroll uses a single scroll event listener mounted once, reading state 
 
 ### Layout
 
-Desktop (≥900px): sidebar fixed, content scrolls independently:
+Desktop (≥1024px): sidebar fixed, content scrolls independently:
 ```css
-.app-shell  { flex-direction: row; height: 100dvh; overflow: hidden; }
+.app-shell  { display: flex; height: 100dvh; overflow: hidden; }
 .app-content { flex: 1; height: 100dvh; overflow-y: auto; }
 .side-nav   { position: sticky; top: 0; height: 100dvh; }
 ```
@@ -813,12 +1063,12 @@ Mobile: full-width single column, bottom nav overlay.
 
 ---
 
-## 17. Icon System
+## 20. Icon System
 
-**Package:** `solar-icon-set` v2.0.1  
+**Package:** `solar-icon-set` v2.0.1
 **Style:** Linear (outline) throughout
 
-All Lucide icons replaced with Solar equivalents. Solar exports 1200+ React components as ESM, enabling tree shaking — only imported icons are bundled.
+Solar exports 1200+ React components as ESM, enabling tree shaking — only imported icons are bundled.
 
 ### Key Icon Mappings
 
@@ -834,19 +1084,22 @@ All Lucide icons replaced with Solar equivalents. Solar exports 1200+ React comp
 | Settings | `SettingsMinimalisticLinear` |
 | TV shows | `TVLinear` |
 | Films | `VideoLibraryLinear` |
+| Pin to top | `PinLinear` |
+| Share | `ShareLinear` |
+| Lists | `ListLinear` |
+| Delete | `TrashBinMinimalistic2Linear` |
 
 ---
 
-## 18. Seasonal & Effects System
+## 21. Seasonal & Effects System
 
-**File:** `src/hooks/useSeason.js`, `src/components/Effects.js`
+**File:** `src/hooks/useSeason.jsx`, `src/components/Effects.jsx`
 
 ### Season Detection
 
 ```javascript
 getCurrentSeason(override = null) {
   if (override) return override; // admin override
-  
   const month = new Date().getMonth() + 1;
   const day   = new Date().getDate();
 
@@ -861,168 +1114,69 @@ getCurrentSeason(override = null) {
 }
 ```
 
-Each season configures a special section on the Home page with themed genres.
+### Season Config
+
+```javascript
+SEASON_CONFIG = {
+  halloween: { genres: [27, 53, 9648], sort: 'popularity.desc' },  // Horror, Thriller, Mystery
+  newyear:   { genres: [35, 10751, 18], sort: 'vote_average.desc' },// Comedy, Family, Drama
+  summer:    { genres: [28, 12, 35], sort: 'popularity.desc' },     // Action, Adventure, Comedy
+  winter:    { genres: [18, 10749, 14], sort: 'vote_average.desc' },// Drama, Romance, Fantasy
+  spring:    { genres: [35, 10749, 12], sort: 'popularity.desc' },  // Comedy, Romance, Adventure
+  autumn:    { genres: [18, 9648, 53], sort: 'vote_average.desc' }, // Drama, Mystery, Thriller
+}
+```
 
 ### Effects
 
 | Effect | Trigger | Implementation |
 |--------|---------|---------------|
-| Snow | December–January OR admin override | Canvas, 30 flakes, 25fps |
-| Confetti | Mark movie as watched | Canvas, `★  ✦ ●` shapes |
-| Sparks | Rate a movie 10/10 | Canvas burst, 60 particles |
-| Particles | Always (background) | Canvas, 28 gold particles, 30fps |
+| Snow | December-January OR admin override | Canvas, 30 flakes, 25fps |
+| Confetti | Mark movie as watched | Canvas, star/checkmark shapes |
+| Particles | Always (background) | Canvas, 28 gold particles, 30fps with connecting lines |
 
 ---
 
+## 22. About Page / Landing
 
-## 22. Custom Lists
+**Files:** `src/pages/About.jsx`, `src/pages/About.css`
 
-**Files:** `src/pages/Profile.js`, `src/store.js`
+The About page serves dual purpose:
+- **Desktop unauthenticated:** Landing page with auth buttons overlay (replaces AuthScreen)
+- **Authenticated/ mobile:** Standard About page with app info
 
-Custom Lists allow users to create curated collections beyond the built-in Watchlist/Watched. Each list is independent, has its own metadata, and syncs to the cloud.
+### Interactive Elements
 
-### Data Shape
+- **ParticleField:** Canvas-based particle network with connecting lines
+- **FloatingPosters:** 27 real TMDB poster images with mouse parallax
+- **Marquee:** Two-row auto-scrolling text bands
+- **Counter:** Animated number counters with easing
+- **FeatureCards:** 9 feature cards with reveal-on-scroll
+- **MoodSection:** 6 mood categories with live TMDB poster fetches
+- **WatchlistSection:** Mock watchlist UI demonstration
+- **AlgoSection:** Algorithm signal strength visualization
+- **CtaSection:** Call-to-action with orb effects
 
-```typescript
-interface CustomList {
-  id: string;            // "list_1712345678901"
-  name: string;
-  description: string;
-  image: string | null;  // base64 data URL (user upload)
-  items: NormalizedMovie[];
-  createdAt: number;     // Date.now()
-  showProgress: boolean; // show watched/total progress bar
-  deadline: string | null; // ISO date string "2025-12-31"
-}
+### Landing Auth Flow
 
-// Stored as: customLists[id] = CustomList
-```
-
-### Store Operations
-
-```javascript
-createCustomList(name, description, image, opts)
-  // opts: { showProgress, deadline }
-  // → generates id = `list_${Date.now()}`
-  // → returns id
-
-addToCustomList(listId, movie)     // adds if not duplicate
-removeFromCustomList(listId, id)   // removes by movie id
-updateListMeta(listId, meta)       // patches name/desc/image/opts
-deleteCustomList(listId)           // removes from state
-isInCustomList(listId, movieId)    // boolean check
-```
-
-### Progress Calculation
-
-Progress is computed at render time — not stored — by cross-referencing list items against the `watched[]` slice:
-
-```javascript
-const watchedCount = list.items.filter(m => isWatched(m.id)).length;
-const pct = total > 0 ? Math.round((watchedCount / total) * 100) : 0;
-```
-
-This means progress updates automatically when the user marks a film as watched anywhere in the app.
-
-### List Edit Page
-
-`ListEditPage` handles both create and edit flows:
-
-- **Create:** `listId = null` → `createCustomList()` on save, `setCurrentId()` to persist adds before explicit save
-- **Edit:** `listId = existingId` → pre-fills state from `customLists[listId]`, calls `updateListMeta()` on save
-- After save, navigates to `{ view: 'detail', id }` in both cases
-
-### List Detail Page
-
-- Shows progress bar + deadline if configured
-- Each poster has `movie-card__overlay`-style buttons (Watchlist + Watched) — identical markup and CSS to `MovieCard`
-- Buttons are always visible on mobile (no `hover: hover` required), appear on hover on desktop
-- Both buttons are full toggles: watched → `removeFromWatched`, watchlist → `removeFromWatchlist`
-- Edit button (pencil) in header navigates to `ListEditPage` with the current `listId`
+Desktop users see the About page with Login/Register buttons in the top-right. Clicking either shows the AuthScreen in the chosen mode. The `AboutAuthOverlay` component renders fixed-position auth buttons.
 
 ---
 
-## 23. About Page / Landing
-
-**Files:** `src/pages/About.js`, `src/pages/About.css`
-
-The About page doubles as a product landing page with several interactive elements.
-
-### Film Strip
-
-Animated scrolling strip of real TMDB posters (20 films, duplicated for seamless loop). Uses `requestAnimationFrame` with a mutable ref for position — avoids React re-renders entirely:
-
-```javascript
-const posRef = useRef(offset);
-const animate = () => {
-  posRef.current -= direction * (speed / 60);
-  if (posRef.current < -total) posRef.current += total;
-  trackRef.current.style.transform = `translateX(${posRef.current}px)`;
-  rafRef.current = requestAnimationFrame(animate);
-};
-```
-
-Two rows scroll in opposite directions at different speeds.
-
-### Mouse Parallax
-
-Hero section floating posters respond to mouse position via CSS custom properties:
-
-```javascript
-// On mousemove:
-el.style.setProperty('--mx', x.toFixed(3)); // -1 to 1
-el.style.setProperty('--my', y.toFixed(3));
-
-// In CSS:
-.ahp--1 { transform: translateX(calc(var(--mx, 0) * -12px)) ... }
-```
-
-No state updates — direct DOM manipulation for 60fps without React overhead.
-
-### Easter Eggs
-
-| Trigger | Effect |
-|---------|--------|
-| Konami Code `↑↑↓↓←→←→BA` | Full-screen overlay with spinning 🎬 |
-| Click logo 7× | "Кинофанат обнаружен!" tooltip appears |
-| Hint visible at page bottom | Opacity reveals on hover |
-
-### Quote Rotator
-
-Five film director/critic quotes cycle every 4.5s with fade transition. State-based opacity toggle avoids layout shift.
-
-### Interactive Rating Demo
-
-Fully functional 1–10 star picker with colour coding and Russian labels — demonstrates the rating system without requiring account creation.
-
----
-
-## 24. Vercel Deployment & SPA Routing
-
-**File:** `vercel.json`
-
-Since Cinimate uses tab-based navigation (not `react-router-dom`), all routing is handled via React state. The `vercel.json` rewrite ensures any URL path resolves to `index.html`:
-
-```json
-{
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
-}
-```
-
-This is required for any direct URL access (e.g. bookmarks, shared links) to work — without it Vercel returns 404 for non-root paths.
-
----
-
-## 19. Build & Deployment
+## 23. Build & Deployment
 
 ### Build
 
 ```bash
 npm run build
-# → Creates /build with:
-#   build/static/js/main.[hash].js  (~146kb gzipped)
-#   build/static/css/main.[hash].css (~13kb gzipped)
-#   build/index.html
+# → Creates /build with optimized assets via Vite
+```
+
+### Development
+
+```bash
+npm run dev    # Vite dev server on port 3000
+npm run test   # Vitest (configured, no tests written)
 ```
 
 ### Deployment (Vercel)
@@ -1032,30 +1186,33 @@ npm run build
 3. Vercel runs `npm run build`
 4. Outputs deployed to CDN
 
-**Environment variables** must be set in Vercel dashboard (Settings → Environment Variables) — they are not read from `.env` file in production.
+**Environment variables** must be set in Vercel dashboard (Settings → Environment Variables).
 
 ---
 
-## 20. Environment Variables
+## 24. Environment Variables
 
 ```bash
-# src/.env (local development only — NOT committed)
+# .env (local development only — NOT committed)
 
-REACT_APP_TMDB_TOKEN=eyJ...     # TMDB API v4 Bearer token
-REACT_APP_SUPABASE_URL=https://[project].supabase.co
-REACT_APP_SUPABASE_KEY=sb_publishable_...
-REACT_APP_ADMIN_ID=47f2c48c-...  # Supabase user UUID for admin access
+VITE_TMDB_TOKEN=eyJ...              # TMDB API v4 Bearer token
+VITE_SUPABASE_URL=https://[project].supabase.co
+VITE_SUPABASE_KEY=sb_publishable_...
+VITE_TRAKT_CLIENT_ID=...            # Optional: Trakt API Client ID
+VITE_ADMIN_ID=47f2c48c-...          # Optional: Supabase user UUID for admin
+VITE_CLOUDINARY_CLOUD_NAME=...      # Optional: Cloudinary cloud for avatars
+VITE_CLOUDINARY_UPLOAD_PRESET=...   # Optional: Cloudinary upload preset
 ```
 
-All variables must be prefixed with `REACT_APP_` to be accessible in Create React App builds.
+All variables are prefixed with `VITE_` for Vite's `import.meta.env` access.
 
 ---
 
-## 21. Database Schema
+## 25. Database Schema
+
+### user_data
 
 ```sql
--- Run in Supabase SQL Editor
-
 create table if not exists public.user_data (
   user_id      uuid primary key references auth.users(id) on delete cascade,
   watched      jsonb not null default '[]'::jsonb,
@@ -1066,34 +1223,64 @@ create table if not exists public.user_data (
   disliked_ids jsonb not null default '[]'::jsonb,
   tv_progress  jsonb not null default '{}'::jsonb,
   custom_lists jsonb not null default '{}'::jsonb,
+  pinned_ids   jsonb not null default '[]'::jsonb,
   updated_at   timestamptz not null default now()
 );
 
 alter table public.user_data enable row level security;
 
 create policy "Users manage own data"
-  on public.user_data
-  for all
+  on public.user_data for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
 create index on public.user_data(user_id);
 ```
 
+### public_lists
+
+```sql
+create table if not exists public.public_lists (
+  id            text primary key,
+  user_id       uuid references auth.users(id) on delete set null,
+  name          text not null,
+  description   text default '',
+  image         text,
+  items         jsonb not null default '[]'::jsonb,
+  author_name   text,
+  likes         integer default 0,
+  is_public     boolean default true,
+  is_site_list  boolean default false,
+  updated_at    timestamptz default now()
+);
+
+alter table public.public_lists enable row level security;
+
+create policy "Anyone can read public lists"
+  on public.public_lists for select
+  using (is_public = true);
+
+create policy "Authors can manage their lists"
+  on public.public_lists for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+```
+
 ### Data Sizes (Estimated)
 
-| Column | Typical Size | Max Expected |
-|--------|-------------|-------------|
-| `watched` | 2–20kb | ~100kb (1000+ films) |
-| `watchlist` | 1–5kb | ~20kb |
-| `ratings` | 0.5–5kb | ~20kb |
-| `liked_actors` | 0.2–2kb | ~5kb |
-| `tv_progress` | 0.1–2kb | ~10kb |
-| `custom_lists` | 1–20kb | ~200kb (many lists with images) |
+| Table | Column | Typical Size | Max Expected |
+|-------|--------|-------------|-------------|
+| user_data | `watched` | 2-20kb | ~100kb (1000+ films) |
+| user_data | `watchlist` | 1-5kb | ~20kb |
+| user_data | `ratings` | 0.5-5kb | ~20kb |
+| user_data | `liked_actors` | 0.2-2kb | ~5kb |
+| user_data | `tv_progress` | 0.1-2kb | ~10kb |
+| user_data | `custom_lists` | 1-20kb | ~200kb |
+| public_lists | `items` | 0.5-10kb | ~50kb |
 
 Supabase free tier allows 500MB total — with typical usage this supports **~20,000 users** before needing an upgrade.
 
 ---
 
-*Last updated: April 2026*  
-*Cinimate v1.0.3*
+*Last updated: June 2026*
+*Cinimate v0.9.5 Beta*
