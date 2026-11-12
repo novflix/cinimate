@@ -1,9 +1,25 @@
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import AppLayout from '@/layouts/AppLayout'
+import ForYouPage from '@/pages/ForYouPage'
+import HomePage from '@/pages/HomePage'
+import ProfilePage from '@/pages/ProfilePage'
+import SearchPage from '@/pages/SearchPage'
+import SettingsPage from '@/pages/SettingsPage'
+
 function App() {
   return (
-    <main className="app">
-      <h1>Cinimate</h1>
-      <p>Project is ready. Start building in <code>src/App.tsx</code>.</p>
-    </main>
+    <BrowserRouter>
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route index element={<HomePage />} />
+          <Route path="recommendations" element={<ForYouPage />} />
+          <Route path="search" element={<SearchPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   )
 }
 
