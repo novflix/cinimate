@@ -1,3 +1,35 @@
+@font-face {
+  font-family: 'Switzer';
+  src: url('./assets/fonts/switzer-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Switzer';
+  src: url('./assets/fonts/switzer-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Switzer';
+  src: url('./assets/fonts/switzer-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Switzer';
+  src: url('./assets/fonts/switzer-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --bg: #010101;
   --surface: #0c0d0a;
@@ -5,6 +37,7 @@
   --muted: rgb(245 245 242 / 55%);
   --border: rgb(245 245 242 / 9%);
   --accent: #c2fe1f;
+  --font-sans: 'Switzer', system-ui, 'Segoe UI', Roboto, sans-serif;
 
   /* Mobile navigation layout */
   --nav-inset: 16px;
@@ -14,11 +47,7 @@
   --nav-bottom: calc(var(--nav-bottom-offset) + env(safe-area-inset-bottom));
 
   color-scheme: dark;
-  font-family:
-    system-ui,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
+  font-family: var(--font-sans);
   line-height: 1.5;
   color: var(--fg);
   background-color: var(--bg);
@@ -62,12 +91,6 @@ code {
 
 .app {
   position: relative;
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-}
-
-.app__scene {
   display: flex;
   flex: 1;
   flex-direction: column;

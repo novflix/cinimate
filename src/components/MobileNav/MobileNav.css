@@ -1,29 +1,16 @@
+/* A faint haze under the bar so the glass has something to pick up on the dark page. */
 .mobile-nav__glow {
   position: fixed;
   right: 0;
   bottom: 0;
   left: 0;
   z-index: 0;
-  height: 260px;
+  height: 220px;
   pointer-events: none;
-  background:
-    radial-gradient(72% 120% at 50% 132%, rgb(255 255 255 / 13%), transparent 68%),
-    radial-gradient(58% 95% at 72% 128%, rgb(194 254 31 / 7%), transparent 70%);
+  background: radial-gradient(78% 125% at 50% 138%, rgb(255 255 255 / 6%), transparent 70%);
 }
 
-.mobile-nav__pill {
-  position: fixed;
-  right: calc(var(--nav-inset) + var(--nav-control) + var(--nav-gap));
-  bottom: var(--nav-bottom);
-  left: var(--nav-inset);
-  z-index: 1;
-  height: var(--nav-control);
-  border: 1px solid rgb(255 255 255 / 10%);
-  border-radius: calc(var(--nav-control) / 2);
-  background: rgb(255 255 255 / 4%);
-  backdrop-filter: blur(18px) saturate(150%);
-  pointer-events: none;
-}
+/* Search circle ------------------------------------------------------------- */
 
 .mobile-nav__search-bg {
   position: fixed;
@@ -32,10 +19,15 @@
   z-index: 1;
   width: var(--nav-control);
   height: var(--nav-control);
-  border: 1px solid rgb(255 255 255 / 10%);
+  overflow: hidden;
+  background: rgb(255 255 255 / 4.5%);
+  border: 1px solid rgb(255 255 255 / 9%);
   border-radius: 50%;
-  background: rgb(255 255 255 / 4%);
-  backdrop-filter: blur(18px) saturate(150%);
+  box-shadow:
+    0 18px 40px rgb(0 0 0 / 55%),
+    0 3px 10px rgb(0 0 0 / 40%);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
   pointer-events: none;
 }
 
@@ -48,7 +40,7 @@
   place-items: center;
   width: var(--nav-control);
   height: var(--nav-control);
-  color: var(--fg);
+  color: var(--muted);
   text-decoration: none;
   border-radius: 50%;
   cursor: pointer;
@@ -56,10 +48,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.mobile-nav__search:hover {
-  color: var(--accent);
-}
-
+.mobile-nav__search:hover,
 .mobile-nav__search[aria-current='page'] {
   color: var(--accent);
 }
@@ -69,90 +58,104 @@
   outline-offset: 3px;
 }
 
-.mobile-nav__indicator {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 2;
-  border: 1px solid rgb(255 255 255 / 14%);
-  border-radius: 22px;
-  background: rgb(255 255 255 / 8%);
-  backdrop-filter: blur(10px);
-  pointer-events: none;
-  will-change: transform;
-  transition:
-    transform 360ms cubic-bezier(0.32, 1.32, 0.36, 1),
-    width 320ms cubic-bezier(0.32, 1.32, 0.36, 1),
-    height 320ms cubic-bezier(0.32, 1.32, 0.36, 1),
-    opacity 180ms ease;
+.mobile-nav__search:active svg {
+  transform: scale(0.92);
 }
 
-.mobile-nav__tabs {
+.mobile-nav__search svg {
+  transition: transform 220ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .mobile-nav__search-bg {
+    background-color: rgb(16 17 14 / 94%);
+  }
+}
+
+/* Tab bar ------------------------------------------------------------------- */
+
+.mobile-nav__navbar {
   position: fixed;
   right: calc(var(--nav-inset) + var(--nav-control) + var(--nav-gap));
   bottom: var(--nav-bottom);
   left: var(--nav-inset);
   z-index: 3;
-  display: flex;
   height: var(--nav-control);
-  pointer-events: none;
-}
-
-.mobile-nav__tab {
-  display: grid;
-  flex: 1;
-  place-items: center;
-  color: var(--muted);
-  border-radius: 22px;
-  pointer-events: auto;
-  transition: color 180ms ease;
+  padding: 4px;
+  gap: 0;
+  border-radius: calc(var(--nav-control) / 2);
+  touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+
+  /* Flat, low-contrast glass: a hairline rim instead of glossy gradients. */
+  --lg-tint: rgb(255 255 255 / 5%);
+  --lg-indicator: rgb(255 255 255 / 12%);
+  --lg-text: var(--fg);
+  --lg-on-glass: var(--muted);
+  --lg-focus: var(--accent);
+  --lg-shadow-1: 0 8px 20px rgb(0 0 0 / 35%);
+  --lg-fallback: blur(20px) saturate(160%);
 }
 
-.mobile-nav__tab:hover {
+.mobile-nav__navbar > a,
+.mobile-nav__navbar .lg-nav__copy > span {
+  flex: 1;
+  justify-content: center;
+  height: calc(var(--nav-control) - 8px);
+  padding: 0;
+  border-radius: calc((var(--nav-control) - 8px) / 2);
+}
+
+.mobile-nav__navbar .lg-nav__copy {
+  gap: 0;
+  padding: 4px;
+  background: var(--lg-indicator);
+}
+
+.mobile-nav__navbar .lg-nav__copy > span {
   color: var(--fg);
 }
 
-.mobile-nav__tab[aria-current='page'] {
+.mobile-nav__navbar[data-active='0'] .lg-nav__copy > span:nth-child(1),
+.mobile-nav__navbar[data-active='1'] .lg-nav__copy > span:nth-child(2),
+.mobile-nav__navbar[data-active='2'] .lg-nav__copy > span:nth-child(3),
+.mobile-nav__navbar[data-active='3'] .lg-nav__copy > span:nth-child(4) {
   color: var(--accent);
-  filter: drop-shadow(0 0 8px rgb(194 254 31 / 35%));
 }
 
-.mobile-nav__tab:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -8px;
+.mobile-nav__navbar > a {
+  color: var(--muted);
 }
 
-.mobile-nav__tab svg,
-.mobile-nav__search svg {
-  transition: transform 260ms cubic-bezier(0.34, 1.4, 0.64, 1);
+.mobile-nav__navbar > a:hover {
+  color: var(--fg);
 }
 
-.mobile-nav__tab:hover svg,
-.mobile-nav__search:hover svg {
-  transform: scale(1.07);
+.mobile-nav__navbar .lg-surface__tint {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 9%);
 }
 
-.mobile-nav__tab:active svg,
-.mobile-nav__search:active svg {
-  transform: scale(0.9);
+.mobile-nav__navbar .lg-surface__shadow {
+  box-shadow:
+    0 18px 44px rgb(0 0 0 / 55%),
+    0 3px 10px rgb(0 0 0 / 40%);
 }
 
-.mobile-nav__tab[aria-current='page'] svg,
-.mobile-nav__search[aria-current='page'] svg {
-  animation: mobile-nav-icon-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+.mobile-nav__navbar .lg-lens-shadow {
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 7%),
+    0 6px 16px rgb(0 0 0 / 30%);
 }
 
-@keyframes mobile-nav-icon-pop {
-  0% {
-    transform: scale(0.78);
-  }
+.mobile-nav__navbar .lg-nav__copy,
+.mobile-nav__navbar .lg-lens-shadow {
+  transition: opacity 160ms ease;
+}
 
-  55% {
-    transform: scale(1.12);
-  }
-
-  100% {
-    transform: scale(1);
-  }
+/* No tab is active on /search: hide the lens but keep the glass capsule. */
+.mobile-nav__navbar--idle .lg-nav__copy,
+.mobile-nav__navbar--idle .lg-lens-shadow {
+  opacity: 0;
 }
