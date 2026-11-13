@@ -4,6 +4,8 @@ import {
   GENRES,
   genreQuery,
   QUALITY,
+  rejectionReport,
+  upcomingFilters,
   withoutGenres,
   type MediaFilter,
 } from '@/api/filters'
@@ -164,6 +166,8 @@ export type PopularMediaItem = {
   backdrop: string | null
   poster: string | null
   popularity: number
+  /** Full release / first air date as `YYYY-MM-DD`, or an empty string when unknown. */
+  releaseDate: string
 }
 
 export type PopularMedia = {
@@ -187,6 +191,7 @@ function toPopularMediaItem(item: TmdbTrendingItem, kind: MediaKind): PopularMed
     backdrop: item.backdrop_path,
     poster: item.poster_path,
     popularity: item.popularity,
+    releaseDate: date ?? '',
   }
 }
 
@@ -210,16 +215,26 @@ function withServerDefaults(path: string): string {
   return `${path}${path.includes('?') ? '&' : '?'}${params.join('&')}`
 }
 
+type ListOptions = {
+  /** `upcoming` skips the vote-based rules and server defaults, since unreleased titles have no votes. */
+  profile?: 'released' | 'upcoming'
+  pages?: number
+  limit?: number
+}
+
 async function loadPopularList(
   path: string,
   kind: MediaKind,
   filters: MediaFilter[] = [],
+  options: ListOptions = {},
 ): Promise<PopularMediaItem[]> {
-  const url = withServerDefaults(path)
+  const { profile = 'released', pages = LIST_PAGES, limit = LIST_SIZE } = options
+  const url = profile === 'released' ? withServerDefaults(path) : path
+  const gate = profile === 'released' ? baselineFilters : upcomingFilters
   const separator = url.includes('?') ? '&' : '?'
 
-  const pages = await Promise.all(
-    Array.from({ length: LIST_PAGES }, (_, index) =>
+  const responses = await Promise.all(
+    Array.from({ length: pages }, (_, index) =>
       getJson<TmdbList<TmdbTrendingItem>>(
         `${url}${separator}language=en-US&page=${index + 1}`,
       ),
@@ -227,11 +242,20 @@ async function loadPopularList(
   )
 
   const seen = new Set<number>()
+  const rules = [...gate, ...filters]
+  const candidates = responses.flatMap((response) => response.results)
+  const passed = applyFilters(candidates, rules)
 
-  return applyFilters(
-    pages.flatMap((page) => page.results),
-    [...baselineFilters, ...filters],
-  )
+  // Dev only: shows which rule is shrinking a list (open the browser console).
+  if (import.meta.env.DEV) {
+    console.info(`[filters] ${path}`, {
+      fetched: candidates.length,
+      kept: passed.length,
+      rejectedBy: rejectionReport(candidates, rules),
+    })
+  }
+
+  return passed
     .flatMap((item) => {
       if (seen.has(item.id)) return []
       seen.add(item.id)
@@ -239,7 +263,7 @@ async function loadPopularList(
       const media = toPopularMediaItem(item, kind)
       return media ? [media] : []
     })
-    .slice(0, LIST_SIZE)
+    .slice(0, limit)
 }
 
 let popularMediaPromise: Promise<PopularMedia> | null = null
@@ -299,8 +323,11 @@ const NOW_PLAYING_WINDOW_DAYS = 45
 // Release types 2 (limited theatrical) | 3 (theatrical) — TMDB treats `|` as OR, `,` as AND.
 const THEATRICAL_RELEASE_TYPES = '2|3'
 
+// Local calendar date as `YYYY-MM-DD` (toISOString would shift it to UTC).
 function isoDate(date: Date): string {
-  return date.toISOString().slice(0, 10)
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
 }
 
 function nowPlayingQuery(): string {
@@ -471,4 +498,87 @@ export function getNewReleasesMedia(): Promise<NewReleasesMedia> {
   }
 
   return newReleasesMediaPromise
+}
+
+// Coming Soon: titles that come out within the next COMING_SOON_WINDOW_DAYS days. Candidates are
+// picked by popularity (the most anticipated ones), then shown soonest first. The date filter and
+// the date shown on the card both use TMDB's primary date, so the countdown always matches.
+const COMING_SOON_WINDOW_DAYS = 365
+const COMING_SOON_PAGES = 4
+const COMING_SOON_LIMIT_PER_KIND = 40
+
+function comingSoonRange(kind: MediaKind): string {
+  const start = new Date()
+  start.setDate(start.getDate() + 1)
+
+  const end = new Date()
+  end.setDate(end.getDate() + COMING_SOON_WINDOW_DAYS)
+
+  const param = kind === 'movie' ? 'primary_release_date' : 'first_air_date'
+
+  return [
+    'sort_by=popularity.desc',
+    `${param}.gte=${isoDate(start)}`,
+    `${param}.lte=${isoDate(end)}`,
+  ].join('&')
+}
+
+let comingSoonMediaPromise: Promise<PopularMediaItem[]> | null = null
+
+async function loadComingSoonMedia(): Promise<PopularMediaItem[]> {
+  const options = {
+    profile: 'upcoming',
+    pages: COMING_SOON_PAGES,
+    limit: COMING_SOON_LIMIT_PER_KIND,
+  } as const
+
+  const [movies, series] = await Promise.all([
+    loadPopularList(`/discover/movie?${comingSoonRange('movie')}`, 'movie', [], options),
+    loadPopularList(`/discover/tv?${comingSoonRange('series')}`, 'series', seriesOnly, options),
+  ])
+
+  const today = isoDate(new Date())
+
+  return [...movies, ...series]
+    .filter((item) => item.releaseDate > today)
+    .sort(
+      (a, b) =>
+        a.releaseDate.localeCompare(b.releaseDate) || b.popularity - a.popularity,
+    )
+}
+
+export function getComingSoonMedia(): Promise<PopularMediaItem[]> {
+  if (!comingSoonMediaPromise) {
+    comingSoonMediaPromise = loadComingSoonMedia().catch((error: unknown) => {
+      comingSoonMediaPromise = null
+      throw error
+    })
+  }
+
+  return comingSoonMediaPromise
+}
+
+function parseIsoDate(value: string): Date {
+  const [year = 0, month = 1, day = 1] = value.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
+/** `2026-12-18` → `Dec 18`. The countdown next to it makes the year unambiguous. */
+export function formatReleaseDate(date: string): string {
+  return parseIsoDate(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+/** Whole calendar days from today until the date (0 = today, negative = already out). */
+export function daysUntil(date: string): number {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  return Math.round((parseIsoDate(date).getTime() - today.getTime()) / 86_400_000)
+}
+
+export function formatDaysUntil(date: string): string {
+  const days = daysUntil(date)
+
+  if (days <= 0) return 'Today'
+  return days === 1 ? '1 day' : `${days} days`
 }
