@@ -1,7 +1,9 @@
 import {
   applyFilters,
+  baselineFilters,
   GENRES,
   genreQuery,
+  QUALITY,
   withoutGenres,
   type MediaFilter,
 } from '@/api/filters'
@@ -10,6 +12,11 @@ const API_ROOT = 'https://api.themoviedb.org/3'
 const IMAGE_ROOT = 'https://image.tmdb.org/t/p'
 
 const HERO_SLIDE_COUNT = 12
+
+// A rail shows up to LIST_SIZE titles. Filters can drop many of them, so LIST_PAGES pages are
+// fetched up front to keep the rails full after filtering.
+const LIST_PAGES = 2
+const LIST_SIZE = 20
 
 export type MediaKind = 'movie' | 'series'
 
@@ -42,6 +49,7 @@ type TmdbTrendingItem = TmdbBase & {
   release_date?: string
   first_air_date?: string
   genre_ids?: number[]
+  original_language?: string
 }
 
 type TmdbList<T> = {
@@ -93,10 +101,10 @@ async function loadHeroSlides(): Promise<HeroSlide[]> {
   )
 
   return applyFilters(trending.results, [
+    ...baselineFilters,
     withoutGenres(GENRES.talkShow, GENRES.news),
   ])
     .filter((item) => item.media_type === 'movie' || item.media_type === 'tv')
-    .filter((item) => item.vote_count > 0 && item.vote_average > 0)
     .flatMap((item) => {
       const slide = toSlide(item, item.media_type === 'movie' ? 'movie' : 'series')
       return slide ? [slide] : []
@@ -182,20 +190,56 @@ function toPopularMediaItem(item: TmdbTrendingItem, kind: MediaKind): PopularMed
   }
 }
 
+// Server-side counterpart of the baseline filters for `/discover/*`: keeps the pages full of
+// usable titles instead of fetching junk only to throw it away. Params a caller already set win.
+function withServerDefaults(path: string): string {
+  if (!path.startsWith('/discover/')) return path
+
+  const params: string[] = []
+
+  if (!path.includes('vote_count.gte=')) {
+    params.push(`vote_count.gte=${QUALITY.minVotes}`)
+  }
+
+  if (path.startsWith('/discover/movie') && !path.includes('with_runtime')) {
+    params.push(`with_runtime.gte=${QUALITY.minFeatureRuntime}`)
+  }
+
+  if (params.length === 0) return path
+
+  return `${path}${path.includes('?') ? '&' : '?'}${params.join('&')}`
+}
+
 async function loadPopularList(
   path: string,
   kind: MediaKind,
   filters: MediaFilter[] = [],
 ): Promise<PopularMediaItem[]> {
-  const separator = path.includes('?') ? '&' : '?'
-  const list = await getJson<TmdbList<TmdbTrendingItem>>(
-    `${path}${separator}language=en-US&page=1`,
+  const url = withServerDefaults(path)
+  const separator = url.includes('?') ? '&' : '?'
+
+  const pages = await Promise.all(
+    Array.from({ length: LIST_PAGES }, (_, index) =>
+      getJson<TmdbList<TmdbTrendingItem>>(
+        `${url}${separator}language=en-US&page=${index + 1}`,
+      ),
+    ),
   )
 
-  return applyFilters(list.results, filters).flatMap((item) => {
-    const media = toPopularMediaItem(item, kind)
-    return media ? [media] : []
-  })
+  const seen = new Set<number>()
+
+  return applyFilters(
+    pages.flatMap((page) => page.results),
+    [...baselineFilters, ...filters],
+  )
+    .flatMap((item) => {
+      if (seen.has(item.id)) return []
+      seen.add(item.id)
+
+      const media = toPopularMediaItem(item, kind)
+      return media ? [media] : []
+    })
+    .slice(0, LIST_SIZE)
 }
 
 let popularMediaPromise: Promise<PopularMedia> | null = null
@@ -228,7 +272,7 @@ async function loadPopularMedia(): Promise<PopularMedia> {
     series,
     animation: [...animatedMovies, ...animatedSeries]
       .sort((a, b) => b.popularity - a.popularity)
-      .slice(0, 20),
+      .slice(0, LIST_SIZE),
   }
 }
 
@@ -307,7 +351,6 @@ export type ClassicMedia = {
 
 // Anything released up to and including this date counts as a classic.
 const CLASSIC_RELEASED_BEFORE = '1999-12-31'
-const CLASSIC_RAIL_SIZE = 20
 
 // Classics are ranked by rating, so a minimum vote count keeps obscure titles with a handful
 // of perfect scores out. Series and animation collect far fewer votes than live-action films.
@@ -357,7 +400,7 @@ async function loadClassicMedia(): Promise<ClassicMedia> {
     series,
     animation: [...animatedMovies, ...animatedSeries]
       .sort((a, b) => b.rating - a.rating)
-      .slice(0, CLASSIC_RAIL_SIZE),
+      .slice(0, LIST_SIZE),
   }
 }
 
