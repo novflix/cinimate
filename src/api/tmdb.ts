@@ -242,3 +242,59 @@ export function getPopularMedia(): Promise<PopularMedia> {
 
   return popularMediaPromise
 }
+
+export type NowPlayingMedia = {
+  movies: PopularMediaItem[]
+  animation: PopularMediaItem[]
+}
+
+// TMDB region (ISO 3166-1) whose theatrical release dates decide what counts as "in theaters".
+const NOW_PLAYING_REGION = 'US'
+// A film stays "in theaters" for roughly six weeks after its release.
+const NOW_PLAYING_WINDOW_DAYS = 45
+// Release types 2 (limited theatrical) | 3 (theatrical) — TMDB treats `|` as OR, `,` as AND.
+const THEATRICAL_RELEASE_TYPES = '2|3'
+
+function isoDate(date: Date): string {
+  return date.toISOString().slice(0, 10)
+}
+
+function nowPlayingQuery(): string {
+  const today = new Date()
+  const windowStart = new Date(today)
+  windowStart.setDate(windowStart.getDate() - NOW_PLAYING_WINDOW_DAYS)
+
+  return [
+    'sort_by=popularity.desc',
+    `region=${NOW_PLAYING_REGION}`,
+    `with_release_type=${THEATRICAL_RELEASE_TYPES}`,
+    `release_date.gte=${isoDate(windowStart)}`,
+    `release_date.lte=${isoDate(today)}`,
+  ].join('&')
+}
+
+let nowPlayingMediaPromise: Promise<NowPlayingMedia> | null = null
+
+// Only movies are shown in theaters, so unlike Popular there is no "Series" rail.
+// Animation keeps its own rail, using the same two-layer genre split as Popular.
+async function loadNowPlayingMedia(): Promise<NowPlayingMedia> {
+  const query = nowPlayingQuery()
+
+  const [movies, animation] = await Promise.all([
+    loadPopularList(`/discover/movie?${query}&${noAnimation}`, 'movie', liveActionOnly),
+    loadPopularList(`/discover/movie?${query}&${animationOnly}`, 'movie'),
+  ])
+
+  return { movies, animation }
+}
+
+export function getNowPlayingMedia(): Promise<NowPlayingMedia> {
+  if (!nowPlayingMediaPromise) {
+    nowPlayingMediaPromise = loadNowPlayingMedia().catch((error: unknown) => {
+      nowPlayingMediaPromise = null
+      throw error
+    })
+  }
+
+  return nowPlayingMediaPromise
+}
