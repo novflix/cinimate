@@ -34,7 +34,7 @@ read-only token and rotate it if it leaks.
 
 ```
 src/
-  api/          TMDB client and formatters
+  api/          TMDB client, filters and formatters
   assets/       logo and self-hosted Switzer fonts
   components/   Navbar, MobileNav, HeroBanner, CategoryTabs
   hooks/        media query and data hooks

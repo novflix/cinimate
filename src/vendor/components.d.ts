@@ -8,6 +8,7 @@ export type LgNavbarElement = HTMLElement & {
 }
 
 export { createGlass } from './liquid-glass'
+export { createSpring } from './liquid-glass'
 export type {
   LiquidGlassController,
   LiquidGlassOptions,

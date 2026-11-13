@@ -1,6 +1,41 @@
+/* Fixed shell keeps the whole bar in one stable layer: children are absolute, so they stay
+   pinned to the visible viewport even while the mobile browser's URL bar collapses. */
+.mobile-nav {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 40;
+  height: 100vh;
+  height: 100dvh;
+  pointer-events: none;
+
+  /* Selected-tab fill shared by the bar indicator and the search circle. */
+  --lg-indicator: rgb(255 255 255 / 12%);
+}
+
+/* Darkening of the content that slides under the floating bar, so light posters never
+   wash out the glass. Dense at the bottom (under the bar) and fading upwards. */
+.mobile-nav__scrim {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  height: calc(var(--nav-bottom) + var(--nav-control) + 56px);
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgb(1 1 1 / 0%) 0%,
+    rgb(1 1 1 / 45%) 38%,
+    rgb(1 1 1 / 76%) 72%,
+    rgb(1 1 1 / 88%) 100%
+  );
+}
+
 /* A faint haze under the bar so the glass has something to pick up on the dark page. */
 .mobile-nav__glow {
-  position: fixed;
+  position: absolute;
   right: 0;
   bottom: 0;
   left: 0;
@@ -12,27 +47,58 @@
 
 /* Search circle ------------------------------------------------------------- */
 
+/* Same glass body as the navbar pill: a white tint over the refracted backdrop, a hairline rim
+   and the same drop shadow. Kept a touch denser than `--lg-tint` so the small circle reads as a
+   surface at this size. The rim is an inset shadow (not a border) so the content box stays 60px,
+   which keeps the selected lens at the same 52px as the navbar indicator. */
 .mobile-nav__search-bg {
-  position: fixed;
+  position: absolute;
   right: var(--nav-inset);
   bottom: var(--nav-bottom);
-  z-index: 1;
+  z-index: 2;
   width: var(--nav-control);
   height: var(--nav-control);
   overflow: hidden;
-  background: rgb(255 255 255 / 4.5%);
-  border: 1px solid rgb(255 255 255 / 9%);
+  background-color: rgb(255 255 255 / 8%);
   border-radius: 50%;
   box-shadow:
-    0 18px 40px rgb(0 0 0 / 55%),
+    inset 0 0 0 1px rgb(255 255 255 / 10%),
+    0 18px 44px rgb(0 0 0 / 55%),
     0 3px 10px rgb(0 0 0 / 40%);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
   pointer-events: none;
 }
 
+/* The selected lens is the navbar's indicator rebuilt as a circle: same 4px inset, same
+   `--lg-indicator` fill, same rim/shadow and the same liquid-glass optics (the refraction is
+   attached from JS). */
+.mobile-nav__search-lens-shadow,
+.mobile-nav__search-lens {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.mobile-nav__search-lens-shadow {
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 7%),
+    0 6px 16px rgb(0 0 0 / 30%);
+}
+
+.mobile-nav__search-lens {
+  background: var(--lg-indicator);
+}
+
+.mobile-nav__search-bg--active .mobile-nav__search-lens,
+.mobile-nav__search-bg--active .mobile-nav__search-lens-shadow {
+  opacity: 1;
+}
+
 .mobile-nav__search {
-  position: fixed;
+  position: absolute;
   right: var(--nav-inset);
   bottom: var(--nav-bottom);
   z-index: 4;
@@ -44,6 +110,7 @@
   text-decoration: none;
   border-radius: 50%;
   cursor: pointer;
+  pointer-events: auto;
   transition: color 180ms ease;
   -webkit-tap-highlight-color: transparent;
 }
@@ -74,10 +141,55 @@
   }
 }
 
+/* Travelling highlight ------------------------------------------------------ */
+
+/* The tab bar's lens is clipped inside its pill, so when the selection jumps to the floating
+   search circle this overlay carries the same fill and rim across the gap in one spring. It sits
+   at the circle's level (under the bar) so the highlight slides through the bar's glass. */
+.mobile-nav__traveler {
+  position: absolute;
+  bottom: calc(var(--nav-bottom) + 4px);
+  left: 0;
+  z-index: 2;
+  display: none;
+  height: calc(var(--nav-control) - 8px);
+  border-radius: 999px;
+  background: var(--lg-indicator);
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 7%),
+    0 6px 16px rgb(0 0 0 / 30%);
+  pointer-events: none;
+  will-change: transform, width;
+}
+
+.mobile-nav__traveler.is-active {
+  display: block;
+}
+
+/* Both endpoints stay dark while the highlight is in flight. On the way back the bar's lens must
+   also be held back — it would otherwise fade in at its old position. */
+.mobile-nav.is-traveling .mobile-nav__search-lens,
+.mobile-nav.is-traveling .mobile-nav__search-lens-shadow,
+.mobile-nav.is-traveling-to-tab .mobile-nav__navbar .lg-nav__copy,
+.mobile-nav.is-traveling-to-tab .mobile-nav__navbar .lg-lens-shadow {
+  opacity: 0 !important;
+  transition: none !important;
+}
+
+/* Snap the destination on instead of fading it: the overlay lands exactly on top of it, so the
+   swap reads as the same highlight settling into place. */
+.mobile-nav__navbar--settled .lg-nav__copy,
+.mobile-nav__navbar--settled .lg-lens-shadow,
+.mobile-nav__search-bg--settled .mobile-nav__search-lens,
+.mobile-nav__search-bg--settled .mobile-nav__search-lens-shadow {
+  opacity: 1;
+  transition: none !important;
+}
+
 /* Tab bar ------------------------------------------------------------------- */
 
 .mobile-nav__navbar {
-  position: fixed;
+  position: absolute;
   right: calc(var(--nav-inset) + var(--nav-control) + var(--nav-gap));
   bottom: var(--nav-bottom);
   left: var(--nav-inset);
@@ -86,12 +198,12 @@
   padding: 4px;
   gap: 0;
   border-radius: calc(var(--nav-control) / 2);
+  pointer-events: auto;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 
   /* Flat, low-contrast glass: a hairline rim instead of glossy gradients. */
   --lg-tint: rgb(255 255 255 / 5%);
-  --lg-indicator: rgb(255 255 255 / 12%);
   --lg-text: var(--fg);
   --lg-on-glass: var(--muted);
   --lg-focus: var(--accent);

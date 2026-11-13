@@ -43,3 +43,14 @@ export function createGlass(
   target: HTMLElement,
   options?: LiquidGlassOptions,
 ): LiquidGlassController
+
+export function createSpring(
+  initial: number,
+  onUpdate: (value: number, velocity: number) => void,
+  options?: { stiffness?: number; damping?: number; mass?: number },
+): {
+  set(next: number, options?: { immediate?: boolean }): void
+  stop(): void
+  readonly value: number
+  readonly target: number
+}

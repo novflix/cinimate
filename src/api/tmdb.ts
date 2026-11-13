@@ -1,3 +1,11 @@
+import {
+  applyFilters,
+  GENRES,
+  genreQuery,
+  withoutGenres,
+  type MediaFilter,
+} from '@/api/filters'
+
 const API_ROOT = 'https://api.themoviedb.org/3'
 const IMAGE_ROOT = 'https://image.tmdb.org/t/p'
 
@@ -23,6 +31,7 @@ type TmdbBase = {
   vote_count: number
   popularity: number
   backdrop_path: string | null
+  poster_path: string | null
   adult?: boolean
 }
 
@@ -83,12 +92,11 @@ async function loadHeroSlides(): Promise<HeroSlide[]> {
     '/trending/all/week?language=en-US',
   )
 
-  return trending.results
+  return applyFilters(trending.results, [
+    withoutGenres(GENRES.talkShow, GENRES.news),
+  ])
     .filter((item) => item.media_type === 'movie' || item.media_type === 'tv')
     .filter((item) => item.vote_count > 0 && item.vote_average > 0)
-    .filter(
-      (item) => !item.genre_ids?.includes(10767) && !item.genre_ids?.includes(10763),
-    )
     .flatMap((item) => {
       const slide = toSlide(item, item.media_type === 'movie' ? 'movie' : 'series')
       return slide ? [slide] : []
@@ -116,6 +124,13 @@ export function backdropUrl(
   return `${IMAGE_ROOT}/${size}${path}`
 }
 
+export function posterUrl(
+  path: string,
+  size: 'w185' | 'w342' | 'w500' = 'w342',
+): string {
+  return `${IMAGE_ROOT}/${size}${path}`
+}
+
 export function formatRating(rating: number): string {
   return rating.toFixed(1).replace('.', ',')
 }
@@ -130,4 +145,100 @@ export function formatVotes(votes: number): string {
   }
 
   return String(votes)
+}
+
+export type PopularMediaItem = {
+  id: number
+  kind: MediaKind
+  title: string
+  year: string
+  rating: number
+  backdrop: string | null
+  poster: string | null
+  popularity: number
+}
+
+export type PopularMedia = {
+  movies: PopularMediaItem[]
+  series: PopularMediaItem[]
+  animation: PopularMediaItem[]
+}
+
+function toPopularMediaItem(item: TmdbTrendingItem, kind: MediaKind): PopularMediaItem | null {
+  const title = kind === 'movie' ? item.title : item.name
+  const date = kind === 'movie' ? item.release_date : item.first_air_date
+
+  if (!title || item.adult || (!item.backdrop_path && !item.poster_path)) return null
+
+  return {
+    id: item.id,
+    kind,
+    title,
+    year: (date ?? '').slice(0, 4),
+    rating: item.vote_average,
+    backdrop: item.backdrop_path,
+    poster: item.poster_path,
+    popularity: item.popularity,
+  }
+}
+
+async function loadPopularList(
+  path: string,
+  kind: MediaKind,
+  filters: MediaFilter[] = [],
+): Promise<PopularMediaItem[]> {
+  const separator = path.includes('?') ? '&' : '?'
+  const list = await getJson<TmdbList<TmdbTrendingItem>>(
+    `${path}${separator}language=en-US&page=1`,
+  )
+
+  return applyFilters(list.results, filters).flatMap((item) => {
+    const media = toPopularMediaItem(item, kind)
+    return media ? [media] : []
+  })
+}
+
+let popularMediaPromise: Promise<PopularMedia> | null = null
+
+// Animation lives in its own rail, so the live-action rails exclude genre 16 on both layers:
+// the discover query keeps a full page of non-animated titles, the predicate keeps the rule true
+// if a rail is ever pointed at an endpoint that cannot filter (e.g. /tv/popular).
+const liveActionOnly = [withoutGenres(GENRES.animation)]
+const noAnimation = genreQuery('without_genres', [GENRES.animation])
+const animationOnly = genreQuery('with_genres', [GENRES.animation])
+
+async function loadPopularMedia(): Promise<PopularMedia> {
+  const [movies, series, animatedMovies, animatedSeries] = await Promise.all([
+    loadPopularList(
+      `/discover/movie?sort_by=popularity.desc&${noAnimation}`,
+      'movie',
+      liveActionOnly,
+    ),
+    loadPopularList(
+      `/discover/tv?sort_by=popularity.desc&${noAnimation}`,
+      'series',
+      liveActionOnly,
+    ),
+    loadPopularList(`/discover/movie?sort_by=popularity.desc&${animationOnly}`, 'movie'),
+    loadPopularList(`/discover/tv?sort_by=popularity.desc&${animationOnly}`, 'series'),
+  ])
+
+  return {
+    movies,
+    series,
+    animation: [...animatedMovies, ...animatedSeries]
+      .sort((a, b) => b.popularity - a.popularity)
+      .slice(0, 20),
+  }
+}
+
+export function getPopularMedia(): Promise<PopularMedia> {
+  if (!popularMediaPromise) {
+    popularMediaPromise = loadPopularMedia().catch((error: unknown) => {
+      popularMediaPromise = null
+      throw error
+    })
+  }
+
+  return popularMediaPromise
 }

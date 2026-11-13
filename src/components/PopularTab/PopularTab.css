@@ -1,0 +1,27 @@
+.popular-tab {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(24px, 3vw, 36px);
+  width: var(--content-width);
+  margin: clamp(24px, 3vw, 40px) auto 0;
+  padding-bottom: clamp(32px, 4vw, 56px);
+}
+
+.popular-tab__status {
+  padding: 32px 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .popular-tab {
+    width: 100%;
+    margin-top: 18px;
+    padding-bottom: 0;
+    gap: 22px;
+  }
+
+  .popular-tab__status {
+    padding-inline: var(--nav-inset);
+  }
+}
