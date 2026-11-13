@@ -414,3 +414,61 @@ export function getClassicMedia(): Promise<ClassicMedia> {
 
   return classicMediaPromise
 }
+
+export type NewReleasesMedia = {
+  movies: PopularMediaItem[]
+  series: PopularMediaItem[]
+  animation: PopularMediaItem[]
+}
+
+// "New <year>" is everything that has already come out since January 1st of the current year.
+// Upcoming releases belong to the Coming Soon tab, so the range ends today.
+function newReleasesRange(kind: MediaKind): string {
+  const today = new Date()
+  const param = kind === 'movie' ? 'primary_release_date' : 'first_air_date'
+
+  return [
+    'sort_by=popularity.desc',
+    `${param}.gte=${today.getFullYear()}-01-01`,
+    `${param}.lte=${isoDate(today)}`,
+  ].join('&')
+}
+
+// Talk shows and news programmes are tagged as series but are not what this tab is about.
+const seriesOnly = [withoutGenres(GENRES.talkShow, GENRES.news)]
+
+let newReleasesMediaPromise: Promise<NewReleasesMedia> | null = null
+
+async function loadNewReleasesMedia(): Promise<NewReleasesMedia> {
+  const movieRange = newReleasesRange('movie')
+  const seriesRange = newReleasesRange('series')
+
+  const [movies, series, animatedMovies, animatedSeries] = await Promise.all([
+    loadPopularList(`/discover/movie?${movieRange}&${noAnimation}`, 'movie', liveActionOnly),
+    loadPopularList(`/discover/tv?${seriesRange}&${noAnimation}`, 'series', [
+      ...liveActionOnly,
+      ...seriesOnly,
+    ]),
+    loadPopularList(`/discover/movie?${movieRange}&${animationOnly}`, 'movie'),
+    loadPopularList(`/discover/tv?${seriesRange}&${animationOnly}`, 'series', seriesOnly),
+  ])
+
+  return {
+    movies,
+    series,
+    animation: [...animatedMovies, ...animatedSeries]
+      .sort((a, b) => b.popularity - a.popularity)
+      .slice(0, LIST_SIZE),
+  }
+}
+
+export function getNewReleasesMedia(): Promise<NewReleasesMedia> {
+  if (!newReleasesMediaPromise) {
+    newReleasesMediaPromise = loadNewReleasesMedia().catch((error: unknown) => {
+      newReleasesMediaPromise = null
+      throw error
+    })
+  }
+
+  return newReleasesMediaPromise
+}
