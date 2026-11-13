@@ -298,3 +298,76 @@ export function getNowPlayingMedia(): Promise<NowPlayingMedia> {
 
   return nowPlayingMediaPromise
 }
+
+export type ClassicMedia = {
+  movies: PopularMediaItem[]
+  series: PopularMediaItem[]
+  animation: PopularMediaItem[]
+}
+
+// Anything released up to and including this date counts as a classic.
+const CLASSIC_RELEASED_BEFORE = '1999-12-31'
+const CLASSIC_RAIL_SIZE = 20
+
+// Classics are ranked by rating, so a minimum vote count keeps obscure titles with a handful
+// of perfect scores out. Series and animation collect far fewer votes than live-action films.
+const CLASSIC_MIN_VOTES = {
+  movies: 3000,
+  series: 300,
+  animatedMovies: 1000,
+  animatedSeries: 100,
+} as const
+
+function classicQuery(kind: MediaKind, minVotes: number): string {
+  const dateParam = kind === 'movie' ? 'primary_release_date.lte' : 'first_air_date.lte'
+
+  return [
+    'sort_by=vote_average.desc',
+    `vote_count.gte=${minVotes}`,
+    `${dateParam}=${CLASSIC_RELEASED_BEFORE}`,
+  ].join('&')
+}
+
+let classicMediaPromise: Promise<ClassicMedia> | null = null
+
+async function loadClassicMedia(): Promise<ClassicMedia> {
+  const [movies, series, animatedMovies, animatedSeries] = await Promise.all([
+    loadPopularList(
+      `/discover/movie?${classicQuery('movie', CLASSIC_MIN_VOTES.movies)}&${noAnimation}`,
+      'movie',
+      liveActionOnly,
+    ),
+    loadPopularList(
+      `/discover/tv?${classicQuery('series', CLASSIC_MIN_VOTES.series)}&${noAnimation}`,
+      'series',
+      liveActionOnly,
+    ),
+    loadPopularList(
+      `/discover/movie?${classicQuery('movie', CLASSIC_MIN_VOTES.animatedMovies)}&${animationOnly}`,
+      'movie',
+    ),
+    loadPopularList(
+      `/discover/tv?${classicQuery('series', CLASSIC_MIN_VOTES.animatedSeries)}&${animationOnly}`,
+      'series',
+    ),
+  ])
+
+  return {
+    movies,
+    series,
+    animation: [...animatedMovies, ...animatedSeries]
+      .sort((a, b) => b.rating - a.rating)
+      .slice(0, CLASSIC_RAIL_SIZE),
+  }
+}
+
+export function getClassicMedia(): Promise<ClassicMedia> {
+  if (!classicMediaPromise) {
+    classicMediaPromise = loadClassicMedia().catch((error: unknown) => {
+      classicMediaPromise = null
+      throw error
+    })
+  }
+
+  return classicMediaPromise
+}
