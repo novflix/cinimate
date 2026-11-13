@@ -1,6 +1,6 @@
 .hero {
   position: relative;
-  width: clamp(340px, 72vw, 1440px);
+  width: var(--content-width);
   height: clamp(420px, 34vw, 560px);
   margin: clamp(20px, 2.4vw, 36px) auto 0;
   overflow: hidden;
@@ -57,8 +57,13 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  max-width: min(680px, 76%);
   padding: clamp(28px, 4.2%, 56px);
+}
+
+.hero__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   animation: hero-info-in 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -151,12 +156,13 @@
   overflow-wrap: break-word;
   text-overflow: ellipsis;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
 }
 
 .hero__actions {
   display: flex;
+  align-items: center;
   gap: 10px;
   margin-top: 24px;
 }
@@ -165,13 +171,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  height: 46px;
-  padding: 0 20px;
+  gap: 10px;
+  height: 54px;
+  padding: 0 28px;
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: 14px;
   font: inherit;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.01em;
   cursor: pointer;
@@ -215,7 +221,7 @@
 
 .hero__dots {
   position: absolute;
-  bottom: clamp(20px, 3.4%, 32px);
+  bottom: 24px;
   left: 50%;
   z-index: 3;
   display: flex;
@@ -349,7 +355,6 @@
   }
 
   .hero__info {
-    max-width: none;
     padding: 20px 18px 44px;
     justify-content: flex-end;
   }
@@ -384,9 +389,7 @@
 
   .hero__dots {
     bottom: 20px;
-    left: 50%;
     gap: 5px;
-    transform: translateX(-50%);
   }
 
   .hero__dot {

@@ -39,6 +39,9 @@
   --accent: #c2fe1f;
   --font-sans: 'Switzer', system-ui, 'Segoe UI', Roboto, sans-serif;
 
+  /* Shared width for page content (hero, category tabs, rows) */
+  --content-width: clamp(340px, 72vw, 1440px);
+
   /* Mobile navigation layout */
   --nav-inset: 16px;
   --nav-control: 60px;

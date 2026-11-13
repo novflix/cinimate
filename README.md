@@ -36,7 +36,7 @@ read-only token and rotate it if it leaks.
 src/
   api/          TMDB client and formatters
   assets/       logo and self-hosted Switzer fonts
-  components/   Navbar, MobileNav, HeroBanner
+  components/   Navbar, MobileNav, HeroBanner, CategoryTabs
   hooks/        media query and data hooks
   layouts/      app shell with LiquidGlass root
   pages/        route-level pages
