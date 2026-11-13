@@ -6,7 +6,7 @@
   overflow: hidden;
   isolation: isolate;
   border-radius: 20px;
-  background-color: var(--surface);
+  background-color: var(--bg);
 }
 
 .hero__slide {
@@ -33,15 +33,18 @@
 
 .hero__shade {
   position: absolute;
-  inset: 0;
+  inset: 0 0 -2px;
   z-index: 1;
   pointer-events: none;
   background:
     linear-gradient(
       180deg,
-      rgb(1 1 1 / 0%) 42%,
-      rgb(1 1 1 / 68%) 78%,
-      rgb(1 1 1 / 88%) 100%
+      rgb(1 1 1 / 0%) 34%,
+      rgb(1 1 1 / 10%) 48%,
+      rgb(1 1 1 / 32%) 64%,
+      rgb(1 1 1 / 64%) 78%,
+      rgb(1 1 1 / 88%) 90%,
+      rgb(1 1 1 / 100%) 97%
     ),
     linear-gradient(90deg, rgb(1 1 1 / 48%) 0%, rgb(1 1 1 / 12%) 55%, transparent 80%);
 }
@@ -212,12 +215,13 @@
 
 .hero__dots {
   position: absolute;
-  right: clamp(20px, 3.2%, 40px);
   bottom: clamp(20px, 3.4%, 32px);
+  left: 50%;
   z-index: 3;
   display: flex;
   align-items: center;
   gap: 8px;
+  transform: translateX(-50%);
 }
 
 .hero__dot {
@@ -326,16 +330,6 @@
     border-radius: 0;
   }
 
-  .hero__slide {
-    -webkit-mask-image: linear-gradient(
-      180deg,
-      #000 80%,
-      rgb(0 0 0 / 72%) 91%,
-      transparent 100%
-    );
-    mask-image: linear-gradient(180deg, #000 80%, rgb(0 0 0 / 72%) 91%, transparent 100%);
-  }
-
   .hero__slide img {
     object-position: center 28%;
   }
@@ -344,10 +338,12 @@
     background:
       linear-gradient(
         180deg,
-        rgb(1 1 1 / 0%) 34%,
-        rgb(1 1 1 / 30%) 54%,
-        rgb(1 1 1 / 58%) 78%,
-        rgb(1 1 1 / 76%) 100%
+        rgb(1 1 1 / 0%) 24%,
+        rgb(1 1 1 / 12%) 42%,
+        rgb(1 1 1 / 34%) 58%,
+        rgb(1 1 1 / 62%) 74%,
+        rgb(1 1 1 / 88%) 90%,
+        rgb(1 1 1 / 100%) 96%
       ),
       linear-gradient(90deg, rgb(1 1 1 / 48%) 0%, rgb(1 1 1 / 14%) 64%, transparent 90%);
   }
@@ -387,16 +383,18 @@
   }
 
   .hero__dots {
-    right: 18px;
     bottom: 20px;
+    left: 50%;
+    gap: 5px;
+    transform: translateX(-50%);
   }
 
   .hero__dot {
-    width: 7px;
-    height: 7px;
+    width: 5px;
+    height: 5px;
   }
 
   .hero__dot--active {
-    width: 22px;
+    width: 16px;
   }
 }
