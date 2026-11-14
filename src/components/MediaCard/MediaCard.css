@@ -1,4 +1,5 @@
 .media-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -121,6 +122,29 @@
   letter-spacing: -0.005em;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The title link stretches over the whole card, so a click anywhere opens the title page.
+   The action buttons sit above it (z-index 1). */
+.media-card__link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.media-card__link::after {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  content: '';
+}
+
+.media-card__link:focus-visible {
+  outline: none;
+}
+
+.media-card:has(.media-card__link:focus-visible) .media-card__image-wrap {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .media-card__meta {

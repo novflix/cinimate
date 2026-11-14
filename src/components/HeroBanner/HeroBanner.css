@@ -108,6 +108,23 @@
   line-clamp: 3;
 }
 
+.hero__title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.hero__title-link:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+
+.hero__title-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
 .hero__stats {
   display: flex;
   align-items: center;

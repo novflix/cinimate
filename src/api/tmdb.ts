@@ -44,7 +44,7 @@ type TmdbBase = {
   adult?: boolean
 }
 
-type TmdbTrendingItem = TmdbBase & {
+export type TmdbTrendingItem = TmdbBase & {
   media_type?: 'movie' | 'tv' | 'person'
   title?: string
   name?: string
@@ -60,7 +60,7 @@ type TmdbList<T> = {
 
 const token = import.meta.env.VITE_TMDB_TOKEN?.trim()
 
-async function getJson<T>(path: string): Promise<T> {
+export async function getJson<T>(path: string): Promise<T> {
   if (!token) {
     throw new Error('TMDB read token is missing. Add VITE_TMDB_TOKEN to .env.local.')
   }
@@ -141,6 +141,11 @@ export function posterUrl(
   return `${IMAGE_ROOT}/${size}${path}`
 }
 
+// Profile photos use their own size set (w45, w185, h632, original).
+export function profileUrl(path: string, size: 'w185' | 'h632' = 'w185'): string {
+  return `${IMAGE_ROOT}/${size}${path}`
+}
+
 export function formatRating(rating: number): string {
   return rating.toFixed(1).replace('.', ',')
 }
@@ -176,7 +181,10 @@ export type PopularMedia = {
   animation: PopularMediaItem[]
 }
 
-function toPopularMediaItem(item: TmdbTrendingItem, kind: MediaKind): PopularMediaItem | null {
+export function toPopularMediaItem(
+  item: TmdbTrendingItem,
+  kind: MediaKind,
+): PopularMediaItem | null {
   const title = kind === 'movie' ? item.title : item.name
   const date = kind === 'movie' ? item.release_date : item.first_air_date
 
@@ -558,7 +566,7 @@ export function getComingSoonMedia(): Promise<PopularMediaItem[]> {
   return comingSoonMediaPromise
 }
 
-function parseIsoDate(value: string): Date {
+export function parseIsoDate(value: string): Date {
   const [year = 0, month = 1, day = 1] = value.split('-').map(Number)
   return new Date(year, month - 1, day)
 }

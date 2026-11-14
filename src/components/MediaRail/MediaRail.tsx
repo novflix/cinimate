@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { AltArrowLeftIcon } from '@solar-icons/react/bold/alt-arrow-left'
 import { AltArrowRightIcon } from '@solar-icons/react/bold/alt-arrow-right'
 import MediaCard from '@/components/MediaCard/MediaCard'
@@ -7,9 +7,14 @@ import type { LiquidGlassController, LiquidGlassOptions } from '@/vendor/liquid-
 import type { PopularMediaItem } from '@/api/tmdb'
 import './MediaRail.css'
 
-type MediaRailProps = {
+type MediaRailProps<T> = {
   title: string
-  items: PopularMediaItem[]
+  items: T[]
+  /** Renders one item. Without it every item is a `MediaCard`, so `items` must be media items. */
+  renderItem?: (item: T) => ReactNode
+  itemKey?: (item: T) => string | number
+  /** Extra class for the item wrapper, e.g. to give people cards their own width. */
+  itemClassName?: string
 }
 
 // Rail arrows float over the page, so backdrop mode refracts the live content behind them
@@ -30,7 +35,13 @@ const arrowGlass: LiquidGlassOptions = {
   fallback: 'blur(16px) saturate(150%)',
 }
 
-function MediaRail({ title, items }: MediaRailProps) {
+function MediaRail<T = PopularMediaItem>({
+  title,
+  items,
+  renderItem,
+  itemKey,
+  itemClassName,
+}: MediaRailProps<T>) {
   const headingId = useId()
   const isMobile = useMediaQuery('(max-width: 768px)')
   const trackRef = useRef<HTMLUListElement>(null)
@@ -121,11 +132,18 @@ function MediaRail({ title, items }: MediaRailProps) {
       </div>
 
       <ul className="media-rail__track" ref={trackRef} onScroll={updateScrollState}>
-        {items.map((item) => (
-          <li className="media-rail__item" key={`${item.kind}-${item.id}`}>
-            <MediaCard item={item} />
-          </li>
-        ))}
+        {items.map((item) => {
+          const media = item as PopularMediaItem
+
+          return (
+            <li
+              className={`media-rail__item${itemClassName ? ` ${itemClassName}` : ''}`}
+              key={itemKey ? itemKey(item) : `${media.kind}-${media.id}`}
+            >
+              {renderItem ? renderItem(item) : <MediaCard item={media} />}
+            </li>
+          )
+        })}
       </ul>
     </section>
   )

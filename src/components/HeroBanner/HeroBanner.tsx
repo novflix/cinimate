@@ -2,9 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { BookmarkIcon } from '@solar-icons/react/bold/bookmark'
 import { EyeIcon } from '@solar-icons/react/bold/eye'
 import { StarIcon } from '@solar-icons/react/bold/star'
+import { Link } from 'react-router-dom'
 import { backdropUrl, formatRating, formatVotes } from '@/api/tmdb'
 import { useHeroSlides } from '@/hooks/useHeroSlides'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { titlePath } from '@/navigation'
 import './HeroBanner.css'
 
 const AUTOPLAY_DELAY = 7000
@@ -109,7 +111,11 @@ function HeroBanner() {
           <span className="hero__year">{slide.year}</span>
         </div>
 
-        <h1 className="hero__title">{slide.title}</h1>
+        <h1 className="hero__title">
+          <Link className="hero__title-link" to={titlePath(slide.kind, slide.id)}>
+            {slide.title}
+          </Link>
+        </h1>
 
         <div className="hero__stats">
           <span className="hero__rating">

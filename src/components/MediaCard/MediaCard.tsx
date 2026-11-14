@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { BookmarkIcon } from '@solar-icons/react/bold/bookmark'
 import { EyeIcon } from '@solar-icons/react/bold/eye'
 import { StarIcon } from '@solar-icons/react/bold/star'
+import { Link } from 'react-router-dom'
 import {
   formatDaysUntil,
   formatRating,
@@ -9,6 +10,7 @@ import {
   posterUrl,
   type PopularMediaItem,
 } from '@/api/tmdb'
+import { titlePath } from '@/navigation'
 import './MediaCard.css'
 
 type MediaCardProps = {
@@ -72,7 +74,11 @@ function MediaCard({ item, variant = 'default' }: MediaCardProps) {
           </button>
         </div>
       </div>
-      <h3 className="media-card__title">{item.title}</h3>
+      <h3 className="media-card__title">
+        <Link className="media-card__link" to={titlePath(item.kind, item.id)}>
+          {item.title}
+        </Link>
+      </h3>
       <div className="media-card__meta">
         {variant === 'upcoming' && item.releaseDate ? (
           <>

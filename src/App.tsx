@@ -5,6 +5,7 @@ import HomePage from '@/pages/HomePage'
 import ProfilePage from '@/pages/ProfilePage'
 import SearchPage from '@/pages/SearchPage'
 import SettingsPage from '@/pages/SettingsPage'
+import TitlePage from '@/pages/TitlePage'
 
 function App() {
   return (
@@ -16,6 +17,8 @@ function App() {
           <Route path="search" element={<SearchPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="movie/:id" element={<TitlePage kind="movie" />} />
+          <Route path="series/:id" element={<TitlePage kind="series" />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
