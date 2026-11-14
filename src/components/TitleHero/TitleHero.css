@@ -210,6 +210,19 @@
   }
 }
 
+/* The desktop hero has more room around the corners, so the round actions stay compact. */
+@media (min-width: 769px) {
+  .title-hero__circle {
+    width: 42px;
+    height: 42px;
+  }
+
+  .title-hero__circle svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
 @media (max-width: 768px) {
   .title-hero {
     width: 100%;
