@@ -25,6 +25,13 @@ function CategoryTabs({ activeId, onChange, onIntent }: CategoryTabsProps) {
       const tab = tabRefs.current[activeIndex]
       if (!indicator || !tab) return
 
+      // The spring overshoots its target by ~2.6%. At the first and last tab that overshoot
+      // lands outside the scroll container and gets clipped, so those moves use a smooth ease.
+      indicator.classList.toggle(
+        'category-tabs__indicator--edge',
+        activeIndex === 0 || activeIndex === categories.length - 1,
+      )
+
       indicator.style.width = `${tab.offsetWidth}px`
       indicator.style.transform = `translate3d(${tab.offsetLeft}px, 0, 0)`
     }

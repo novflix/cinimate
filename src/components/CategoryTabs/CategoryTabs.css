@@ -30,6 +30,12 @@
     width 420ms cubic-bezier(0.32, 1.28, 0.36, 1);
 }
 
+/* The spring eases past its target. For the first and last tab that would push the pill outside
+   the scrolling row and clip it, so those moves land with a smooth curve instead. */
+.category-tabs__indicator--edge {
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .category-tab {
   position: relative;
   z-index: 1;
