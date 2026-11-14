@@ -142,6 +142,11 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   line-clamp: 3;
+  /* The tight leading leaves less room below the baseline than Switzer's descenders need, so
+     the clamp box clips "y", "g", "p", etc. The padding gives the last line room and the
+     negative margin keeps the spacing below the title unchanged. */
+  padding-bottom: 0.16em;
+  margin-bottom: -0.16em;
 }
 
 .title-hero__actions {
