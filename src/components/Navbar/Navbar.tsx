@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import logo from '@/assets/logo.svg'
-import { navItems } from '@/navigation'
+import { homePath, navItems } from '@/navigation'
 import './Navbar.css'
 
 function Navbar() {
@@ -11,8 +11,8 @@ function Navbar() {
   const indicatorRef = useRef<HTMLSpanElement>(null)
   const linkRefs = useRef<(HTMLAnchorElement | null)[]>([])
 
-  const activeIndex = navItems.findIndex((item) =>
-    item.href === '/' ? pathname === '/' : pathname.startsWith(item.href),
+  const activeIndex = navItems.findIndex(
+    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
   )
 
   useLayoutEffect(() => {
@@ -48,7 +48,7 @@ function Navbar() {
 
   return (
     <header className="navbar">
-      <Link className="navbar__logo" to="/" aria-label="Cinimate home">
+      <Link className="navbar__logo" to={homePath} aria-label="Cinimate home">
         <img src={logo} alt="Cinimate" />
       </Link>
 
@@ -63,7 +63,7 @@ function Navbar() {
             }}
             className="navbar__link"
             to={item.href}
-            end={item.href === '/'}
+            end={item.href === homePath}
           >
             {item.label}
           </NavLink>

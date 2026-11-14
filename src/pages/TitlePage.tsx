@@ -16,6 +16,7 @@ import { MediaRailSkeleton, Skeleton } from '@/components/Skeleton/Skeleton'
 import TitleHero from '@/components/TitleHero/TitleHero'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useTitleDetails } from '@/hooks/useTitleDetails'
+import { homePath } from '@/navigation'
 import './TitlePage.css'
 
 type Fact = { label: string; value: string }
@@ -131,7 +132,7 @@ function TitleView({ kind, id }: TitleViewProps) {
             <button type="button" className="title-page__retry" onClick={reload}>
               Try again
             </button>
-            <Link className="title-page__home" to="/">
+            <Link className="title-page__home" to={homePath}>
               Back to home
             </Link>
           </div>
@@ -237,7 +238,7 @@ function TitlePage({ kind }: TitlePageProps) {
       <div className="title-page">
         <div className="title-page__status" role="status">
           <p>This title does not exist.</p>
-          <Link className="title-page__home" to="/">
+          <Link className="title-page__home" to={homePath}>
             Back to home
           </Link>
         </div>

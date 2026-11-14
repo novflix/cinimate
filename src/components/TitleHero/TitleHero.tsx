@@ -9,6 +9,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { backdropUrl, daysUntil, posterUrl } from '@/api/tmdb'
 import type { TitleDetails } from '@/api/details'
 import SmartImage from '@/components/SmartImage/SmartImage'
+import { homePath } from '@/navigation'
 import './TitleHero.css'
 
 type TitleHeroProps = {
@@ -53,7 +54,7 @@ function TitleHero({ details }: TitleHeroProps) {
   // `key` is "default" for the first entry of the session, i.e. there is nothing to go back to.
   const goBack = () => {
     if (location.key !== 'default') navigate(-1)
-    else navigate('/')
+    else navigate(homePath)
   }
 
   const copyLink = () => {

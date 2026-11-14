@@ -6,6 +6,7 @@ import { UserIcon } from '@solar-icons/react/bold/user'
 import { MagnifierIcon } from '@solar-icons/react/linear/magnifier'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { homePath } from '@/navigation'
 import type { LgNavbarElement } from '@/vendor/components.js'
 import type { LiquidGlassController, LiquidGlassOptions } from '@/vendor/liquid-glass'
 import './MobileNav.css'
@@ -14,7 +15,7 @@ type CreateSpring = typeof import('@/vendor/components.js').createSpring
 type TravelRect = { left: number; width: number }
 
 const items = [
-  { label: 'Home', href: '/', Icon: HomeIcon },
+  { label: 'Home', href: homePath, Icon: HomeIcon },
   { label: 'Recommendations', href: '/recommendations', Icon: CompassIcon },
   { label: 'Profile', href: '/profile', Icon: UserIcon },
   { label: 'Settings', href: '/settings', Icon: SettingsIcon },
@@ -57,8 +58,8 @@ function MobileNav() {
   const { pathname } = useLocation()
 
   const isSearch = pathname.startsWith('/search')
-  const activeIndex = items.findIndex((item) =>
-    item.href === '/' ? pathname === '/' : pathname.startsWith(item.href),
+  const activeIndex = items.findIndex(
+    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
   )
 
   const navRef = useRef<LgNavbarElement>(null)
@@ -264,7 +265,7 @@ function MobileNav() {
               linkRefs.current[index] = element
             }}
             to={href}
-            end={href === '/'}
+            end={href === homePath}
             aria-label={label}
           >
             <Icon size={24} />

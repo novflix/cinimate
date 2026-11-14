@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import AppLayout from '@/layouts/AppLayout'
+import { homePath } from '@/navigation'
 import ForYouPage from '@/pages/ForYouPage'
 import HomePage from '@/pages/HomePage'
 import ProfilePage from '@/pages/ProfilePage'
@@ -12,14 +13,15 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<AppLayout />}>
-          <Route index element={<HomePage />} />
+          <Route index element={<Navigate to={homePath} replace />} />
+          <Route path={homePath} element={<HomePage />} />
           <Route path="recommendations" element={<ForYouPage />} />
           <Route path="search" element={<SearchPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="movie/:id" element={<TitlePage kind="movie" />} />
           <Route path="series/:id" element={<TitlePage kind="series" />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to={homePath} replace />} />
         </Route>
       </Routes>
     </BrowserRouter>
