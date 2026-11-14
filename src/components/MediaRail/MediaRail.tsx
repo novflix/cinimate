@@ -15,6 +15,8 @@ type MediaRailProps<T> = {
   itemKey?: (item: T) => string | number
   /** Extra class for the item wrapper, e.g. to give people cards their own width. */
   itemClassName?: string
+  /** The first cards in the rail are likely above the fold, so load them eagerly. */
+  priority?: boolean
 }
 
 // Rail arrows float over the page, so backdrop mode refracts the live content behind them
@@ -41,6 +43,7 @@ function MediaRail<T = PopularMediaItem>({
   renderItem,
   itemKey,
   itemClassName,
+  priority = false,
 }: MediaRailProps<T>) {
   const headingId = useId()
   const isMobile = useMediaQuery('(max-width: 768px)')
@@ -132,7 +135,7 @@ function MediaRail<T = PopularMediaItem>({
       </div>
 
       <ul className="media-rail__track" ref={trackRef} onScroll={updateScrollState}>
-        {items.map((item) => {
+        {items.map((item, index) => {
           const media = item as PopularMediaItem
 
           return (
@@ -140,7 +143,11 @@ function MediaRail<T = PopularMediaItem>({
               className={`media-rail__item${itemClassName ? ` ${itemClassName}` : ''}`}
               key={itemKey ? itemKey(item) : `${media.kind}-${media.id}`}
             >
-              {renderItem ? renderItem(item) : <MediaCard item={media} />}
+              {renderItem ? (
+                renderItem(item)
+              ) : (
+                <MediaCard item={media} priority={priority && index < 5} />
+              )}
             </li>
           )
         })}

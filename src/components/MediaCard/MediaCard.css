@@ -15,6 +15,29 @@
   background-color: var(--surface);
 }
 
+/* Placeholder shimmer until the poster bitmap is ready; SmartImage fades the poster over it. */
+.media-card__image-wrap:has(img)::before {
+  position: absolute;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    rgb(255 255 255 / 4%) 30%,
+    rgb(255 255 255 / 9%) 50%,
+    rgb(255 255 255 / 4%) 70%
+  );
+  background-size: 220% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  transition: opacity 320ms ease;
+}
+
+.media-card__image-wrap:has(.smart-image[data-state='loaded'])::before,
+.media-card__image-wrap:has(.smart-image[data-state='error'])::before {
+  opacity: 0;
+  animation: none;
+}
+
 .media-card__image {
   display: block;
   width: 100%;

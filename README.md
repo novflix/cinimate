@@ -30,11 +30,29 @@ read-only token and rotate it if it leaks.
 - `npm run preview` — preview the production build
 - `npm run lint` — run oxlint
 
+## Loading and prefetching
+
+Pages never fetch directly. Each API payload is a small in-memory resource
+(`src/api/resource.ts`) that de-duplicates requests, keeps the last result for a few
+minutes, and refreshes stale data in the background while it stays on screen.
+
+That gives the UI two useful properties:
+
+- **No skeleton flash.** Cached or preloaded data is read through `useResource`, so the
+  first render after a tab switch or back-navigation already has content.
+- **Silent warming.** Hovering a tab or card, and idling on the home page, start low-priority
+  requests ahead of time (`src/api/preload.ts`). Speculative failures stay invisible; only
+  data the user is actually waiting for can show an error.
+
+Skeletons mirror the final layout, images fade in over a shimmer (`SmartImage`), and every
+failed feed has a retry button. Background prefetching is skipped when the browser is
+offline, in data-saver mode, or on a `2g` connection.
+
 ## Structure
 
 ```
 src/
-  api/          TMDB client, filters and formatters
+  api/          TMDB client, filters, formatters, resource cache and preloaders
   assets/       logo and self-hosted Switzer fonts
   components/   Navbar, MobileNav, HeroBanner, CategoryTabs
   hooks/        media query and data hooks

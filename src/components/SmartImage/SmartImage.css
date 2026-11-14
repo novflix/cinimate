@@ -1,0 +1,22 @@
+/* Do not set `transition` here: media cards animate their own transform on hover. */
+.smart-image {
+  opacity: 0;
+}
+
+.smart-image[data-state='loaded'] {
+  animation: smart-image-reveal 480ms ease both;
+}
+
+.smart-image[data-state='error'] {
+  opacity: 0;
+}
+
+@keyframes smart-image-reveal {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

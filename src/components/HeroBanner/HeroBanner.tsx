@@ -3,7 +3,9 @@ import { BookmarkIcon } from '@solar-icons/react/bold/bookmark'
 import { EyeIcon } from '@solar-icons/react/bold/eye'
 import { StarIcon } from '@solar-icons/react/bold/star'
 import { Link } from 'react-router-dom'
+import { canPrefetchInBackground, preloadImage, prefetchTitle } from '@/api/preload'
 import { backdropUrl, formatRating, formatVotes } from '@/api/tmdb'
+import SmartImage from '@/components/SmartImage/SmartImage'
 import { useHeroSlides } from '@/hooks/useHeroSlides'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { titlePath } from '@/navigation'
@@ -12,7 +14,7 @@ import './HeroBanner.css'
 const AUTOPLAY_DELAY = 7000
 
 function HeroBanner() {
-  const { slides, error, isLoading } = useHeroSlides()
+  const { slides, error, isLoading, reload } = useHeroSlides()
   const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
 
   const [{ index, previous }, setSlideState] = useState({ index: 0, previous: -1 })
@@ -40,11 +42,13 @@ function HeroBanner() {
   }, [slides, isPaused, prefersReducedMotion, cycle])
 
   useEffect(() => {
-    if (!slides || slides.length < 2) return
+    if (!slides || slides.length < 2 || !canPrefetchInBackground()) return
 
-    const next = slides[(index + 1) % slides.length]
-    const image = new Image()
-    image.src = backdropUrl(next.backdrop, 'w1280')
+    // Warm the next two backdrops so autoplay never reveals an empty slide.
+    for (const offset of [1, 2]) {
+      const next = slides[(index + offset) % slides.length]
+      preloadImage(backdropUrl(next.backdrop, 'w1280'))
+    }
   }, [slides, index])
 
   if (isLoading) {
@@ -55,6 +59,9 @@ function HeroBanner() {
     return (
       <div className="hero hero--error" role="status">
         <p>Featured titles are unavailable right now.</p>
+        <button type="button" className="hero__retry" onClick={reload}>
+          Try again
+        </button>
       </div>
     )
   }
@@ -87,7 +94,7 @@ function HeroBanner() {
             className={`hero__slide ${isActive ? 'hero__slide--active' : 'hero__slide--leaving'}`}
             aria-hidden={!isActive}
           >
-            <img
+            <SmartImage
               src={backdropUrl(item.backdrop, 'w1280')}
               srcSet={`${backdropUrl(item.backdrop, 'w780')} 780w, ${backdropUrl(
                 item.backdrop,
@@ -112,7 +119,16 @@ function HeroBanner() {
         </div>
 
         <h1 className="hero__title">
-          <Link className="hero__title-link" to={titlePath(slide.kind, slide.id)}>
+          <Link
+            className="hero__title-link"
+            to={titlePath(slide.kind, slide.id)}
+            onPointerEnter={() => {
+              prefetchTitle(slide.kind, slide.id, { backdrop: slide.backdrop })
+            }}
+            onFocus={() => {
+              prefetchTitle(slide.kind, slide.id, { backdrop: slide.backdrop })
+            }}
+          >
             {slide.title}
           </Link>
         </h1>

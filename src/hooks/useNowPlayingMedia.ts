@@ -1,27 +1,8 @@
-import { useEffect, useState } from 'react'
-import { getNowPlayingMedia, type NowPlayingMedia } from '@/api/tmdb'
+import { nowPlayingMediaResource } from '@/api/tmdb'
+import { useResource } from '@/hooks/useResource'
 
 export function useNowPlayingMedia() {
-  const [media, setMedia] = useState<NowPlayingMedia | null>(null)
-  const [error, setError] = useState(false)
+  const { data, error, isLoading, reload } = useResource(nowPlayingMediaResource)
 
-  useEffect(() => {
-    let active = true
-
-    getNowPlayingMedia()
-      .then((data) => {
-        if (active) setMedia(data)
-      })
-      .catch((cause: unknown) => {
-        if (!active) return
-        console.error(cause)
-        setError(true)
-      })
-
-    return () => {
-      active = false
-    }
-  }, [])
-
-  return { media, error, isLoading: !media && !error }
+  return { media: data ?? null, error, isLoading, reload }
 }

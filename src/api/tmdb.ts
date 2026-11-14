@@ -9,9 +9,11 @@ import {
   withoutGenres,
   type MediaFilter,
 } from '@/api/filters'
+import { createResource } from '@/api/resource'
 
 const API_ROOT = 'https://api.themoviedb.org/3'
 const IMAGE_ROOT = 'https://image.tmdb.org/t/p'
+const REQUEST_TIMEOUT_MS = 20_000
 
 const HERO_SLIDE_COUNT = 12
 
@@ -65,18 +67,32 @@ export async function getJson<T>(path: string): Promise<T> {
     throw new Error('TMDB read token is missing. Add VITE_TMDB_TOKEN to .env.local.')
   }
 
-  const response = await fetch(`${API_ROOT}${path}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      accept: 'application/json',
-    },
-  })
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
 
-  if (!response.ok) {
-    throw new Error(`TMDB request failed with ${response.status} for ${path}`)
+  try {
+    const response = await fetch(`${API_ROOT}${path}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        accept: 'application/json',
+      },
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      throw new Error(`TMDB request failed with ${response.status} for ${path}`)
+    }
+
+    return (await response.json()) as T
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error(`TMDB request timed out for ${path}`)
+    }
+
+    throw error
+  } finally {
+    window.clearTimeout(timeout)
   }
-
-  return (await response.json()) as T
 }
 
 function toSlide(item: TmdbTrendingItem, kind: MediaKind): HeroSlide | null {
@@ -114,18 +130,9 @@ async function loadHeroSlides(): Promise<HeroSlide[]> {
     .slice(0, HERO_SLIDE_COUNT)
 }
 
-let heroSlidesPromise: Promise<HeroSlide[]> | null = null
-
-export function getHeroSlides(): Promise<HeroSlide[]> {
-  if (!heroSlidesPromise) {
-    heroSlidesPromise = loadHeroSlides().catch((error: unknown) => {
-      heroSlidesPromise = null
-      throw error
-    })
-  }
-
-  return heroSlidesPromise
-}
+export const heroSlidesResource = createResource(loadHeroSlides, {
+  staleTime: 5 * 60_000,
+})
 
 export function backdropUrl(
   path: string,
@@ -274,8 +281,6 @@ async function loadPopularList(
     .slice(0, limit)
 }
 
-let popularMediaPromise: Promise<PopularMedia> | null = null
-
 // Animation lives in its own rail, so the live-action rails exclude genre 16 on both layers:
 // the discover query keeps a full page of non-animated titles, the predicate keeps the rule true
 // if a rail is ever pointed at an endpoint that cannot filter (e.g. /tv/popular).
@@ -308,16 +313,7 @@ async function loadPopularMedia(): Promise<PopularMedia> {
   }
 }
 
-export function getPopularMedia(): Promise<PopularMedia> {
-  if (!popularMediaPromise) {
-    popularMediaPromise = loadPopularMedia().catch((error: unknown) => {
-      popularMediaPromise = null
-      throw error
-    })
-  }
-
-  return popularMediaPromise
-}
+export const popularMediaResource = createResource(loadPopularMedia)
 
 export type NowPlayingMedia = {
   movies: PopularMediaItem[]
@@ -352,8 +348,6 @@ function nowPlayingQuery(): string {
   ].join('&')
 }
 
-let nowPlayingMediaPromise: Promise<NowPlayingMedia> | null = null
-
 // Only movies are shown in theaters, so unlike Popular there is no "Series" rail.
 // Animation keeps its own rail, using the same two-layer genre split as Popular.
 async function loadNowPlayingMedia(): Promise<NowPlayingMedia> {
@@ -367,16 +361,7 @@ async function loadNowPlayingMedia(): Promise<NowPlayingMedia> {
   return { movies, animation }
 }
 
-export function getNowPlayingMedia(): Promise<NowPlayingMedia> {
-  if (!nowPlayingMediaPromise) {
-    nowPlayingMediaPromise = loadNowPlayingMedia().catch((error: unknown) => {
-      nowPlayingMediaPromise = null
-      throw error
-    })
-  }
-
-  return nowPlayingMediaPromise
-}
+export const nowPlayingMediaResource = createResource(loadNowPlayingMedia)
 
 export type ClassicMedia = {
   movies: PopularMediaItem[]
@@ -405,8 +390,6 @@ function classicQuery(kind: MediaKind, minVotes: number): string {
     `${dateParam}=${CLASSIC_RELEASED_BEFORE}`,
   ].join('&')
 }
-
-let classicMediaPromise: Promise<ClassicMedia> | null = null
 
 async function loadClassicMedia(): Promise<ClassicMedia> {
   const [movies, series, animatedMovies, animatedSeries] = await Promise.all([
@@ -439,16 +422,7 @@ async function loadClassicMedia(): Promise<ClassicMedia> {
   }
 }
 
-export function getClassicMedia(): Promise<ClassicMedia> {
-  if (!classicMediaPromise) {
-    classicMediaPromise = loadClassicMedia().catch((error: unknown) => {
-      classicMediaPromise = null
-      throw error
-    })
-  }
-
-  return classicMediaPromise
-}
+export const classicMediaResource = createResource(loadClassicMedia)
 
 export type NewReleasesMedia = {
   movies: PopularMediaItem[]
@@ -471,8 +445,6 @@ function newReleasesRange(kind: MediaKind): string {
 
 // Talk shows and news programmes are tagged as series but are not what this tab is about.
 const seriesOnly = [withoutGenres(GENRES.talkShow, GENRES.news)]
-
-let newReleasesMediaPromise: Promise<NewReleasesMedia> | null = null
 
 async function loadNewReleasesMedia(): Promise<NewReleasesMedia> {
   const movieRange = newReleasesRange('movie')
@@ -497,16 +469,7 @@ async function loadNewReleasesMedia(): Promise<NewReleasesMedia> {
   }
 }
 
-export function getNewReleasesMedia(): Promise<NewReleasesMedia> {
-  if (!newReleasesMediaPromise) {
-    newReleasesMediaPromise = loadNewReleasesMedia().catch((error: unknown) => {
-      newReleasesMediaPromise = null
-      throw error
-    })
-  }
-
-  return newReleasesMediaPromise
-}
+export const newReleasesMediaResource = createResource(loadNewReleasesMedia)
 
 // Coming Soon: titles that come out within the next COMING_SOON_WINDOW_DAYS days. Candidates are
 // picked by popularity (the most anticipated ones), then shown soonest first. The date filter and
@@ -531,8 +494,6 @@ function comingSoonRange(kind: MediaKind): string {
   ].join('&')
 }
 
-let comingSoonMediaPromise: Promise<PopularMediaItem[]> | null = null
-
 async function loadComingSoonMedia(): Promise<PopularMediaItem[]> {
   const options = {
     profile: 'upcoming',
@@ -555,16 +516,7 @@ async function loadComingSoonMedia(): Promise<PopularMediaItem[]> {
     )
 }
 
-export function getComingSoonMedia(): Promise<PopularMediaItem[]> {
-  if (!comingSoonMediaPromise) {
-    comingSoonMediaPromise = loadComingSoonMedia().catch((error: unknown) => {
-      comingSoonMediaPromise = null
-      throw error
-    })
-  }
-
-  return comingSoonMediaPromise
-}
+export const comingSoonMediaResource = createResource(loadComingSoonMedia)
 
 export function parseIsoDate(value: string): Date {
   const [year = 0, month = 1, day = 1] = value.split('-').map(Number)

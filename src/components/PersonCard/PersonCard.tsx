@@ -1,5 +1,6 @@
 import { profileUrl } from '@/api/tmdb'
 import type { TitlePerson } from '@/api/details'
+import SmartImage from '@/components/SmartImage/SmartImage'
 import './PersonCard.css'
 
 type PersonCardProps = {
@@ -14,7 +15,7 @@ function PersonCard({ person }: PersonCardProps) {
     <figure className="person-card">
       <div className="person-card__photo">
         {person.photo ? (
-          <img
+          <SmartImage
             src={profileUrl(person.photo, 'w185')}
             srcSet={`${profileUrl(person.photo, 'w185')} 185w, ${profileUrl(
               person.photo,

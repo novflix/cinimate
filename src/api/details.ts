@@ -1,4 +1,5 @@
 import { applyFilters, baselineFilters } from '@/api/filters'
+import { createResource, type Resource } from '@/api/resource'
 import {
   getJson,
   parseIsoDate,
@@ -208,28 +209,47 @@ function toTitleDetails(data: TmdbDetails, kind: MediaKind): TitleDetails {
   }
 }
 
-const cache = new Map<string, Promise<TitleDetails>>()
+const TITLE_DETAILS_STALE_TIME = 30 * 60_000
 
-/** One request: details, credits, age rating and recommendations are appended to it. */
-export function getTitleDetails(kind: MediaKind, id: number): Promise<TitleDetails> {
+const titleDetailsResources = new Map<string, Resource<TitleDetails>>()
+
+/** One resource per title, so a page visited before (or preloaded on hover) opens instantly. */
+export function titleDetailsResource(kind: MediaKind, id: number): Resource<TitleDetails> {
   const key = `${kind}-${id}`
-  const cached = cache.get(key)
+  const cached = titleDetailsResources.get(key)
   if (cached) return cached
 
+  const resource = createResource(() => loadTitleDetails(kind, id), {
+    staleTime: TITLE_DETAILS_STALE_TIME,
+  })
+
+  // Keep the cache bounded during a long session; the oldest titles are dropped first.
+  if (titleDetailsResources.size >= 80) {
+    const oldest = titleDetailsResources.keys().next().value
+    if (oldest) titleDetailsResources.delete(oldest)
+  }
+
+  titleDetailsResources.set(key, resource)
+  return resource
+}
+
+/** One request: details, credits, age rating and recommendations are appended to it. */
+async function loadTitleDetails(kind: MediaKind, id: number): Promise<TitleDetails> {
   const path =
     kind === 'movie'
       ? `/movie/${id}?language=en-US&append_to_response=credits,release_dates,recommendations,similar`
       : `/tv/${id}?language=en-US&append_to_response=credits,content_ratings,recommendations,similar`
 
-  const request = getJson<TmdbDetails>(path)
-    .then((data) => toTitleDetails(data, kind))
-    .catch((error: unknown) => {
-      cache.delete(key)
-      throw error
-    })
+  const data = await getJson<TmdbDetails>(path)
+  return toTitleDetails(data, kind)
+}
 
-  cache.set(key, request)
-  return request
+export function getTitleDetails(kind: MediaKind, id: number): Promise<TitleDetails> {
+  return titleDetailsResource(kind, id).get()
+}
+
+export function prefetchTitleDetails(kind: MediaKind, id: number): Promise<void> {
+  return titleDetailsResource(kind, id).prefetch()
 }
 
 /** 102 → `1h 42m`, 45 → `45m`. */

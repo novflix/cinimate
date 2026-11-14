@@ -12,6 +12,7 @@ import { formatRating, type MediaKind } from '@/api/tmdb'
 import MediaGrid from '@/components/MediaGrid/MediaGrid'
 import MediaRail from '@/components/MediaRail/MediaRail'
 import PersonCard, { personItemClass } from '@/components/PersonCard/PersonCard'
+import { MediaRailSkeleton, Skeleton } from '@/components/Skeleton/Skeleton'
 import TitleHero from '@/components/TitleHero/TitleHero'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useTitleDetails } from '@/hooks/useTitleDetails'
@@ -53,8 +54,42 @@ type TitleViewProps = {
   id: number
 }
 
+function TitlePageSkeleton() {
+  return (
+    <div className="title-page" aria-busy="true">
+      <span className="visually-hidden" role="status">
+        Loading title details…
+      </span>
+
+      <div className="title-hero title-hero--loading" aria-hidden="true" />
+
+      <div className="title-page__body" aria-hidden="true">
+        <div className="title-page__summary">
+          <div className="title-page__intro">
+            <Skeleton className="title-page-skeleton__meta" />
+            <Skeleton className="title-page-skeleton__line" />
+            <Skeleton className="title-page-skeleton__line title-page-skeleton__line--short" />
+          </div>
+
+          <div className="title-page__facts">
+            {Array.from({ length: 6 }, (_, index) => (
+              <div className="title-page__fact" key={index}>
+                <Skeleton className="title-page-skeleton__fact-value" />
+                <Skeleton className="title-page-skeleton__fact-label" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <MediaRailSkeleton />
+        <MediaRailSkeleton />
+      </div>
+    </div>
+  )
+}
+
 function TitleView({ kind, id }: TitleViewProps) {
-  const { details, error, isLoading } = useTitleDetails(kind, id)
+  const { details, error, isLoading, reload } = useTitleDetails(kind, id)
   const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
   const [showSimilar, setShowSimilar] = useState(false)
   const similarRef = useRef<HTMLDivElement>(null)
@@ -84,11 +119,7 @@ function TitleView({ kind, id }: TitleViewProps) {
   }, [showSimilar, prefersReducedMotion])
 
   if (isLoading) {
-    return (
-      <div className="title-page">
-        <div className="title-hero title-hero--loading" aria-hidden="true" />
-      </div>
-    )
+    return <TitlePageSkeleton />
   }
 
   if (error || !details) {
@@ -96,9 +127,14 @@ function TitleView({ kind, id }: TitleViewProps) {
       <div className="title-page">
         <div className="title-page__status" role="status">
           <p>This title is unavailable right now.</p>
-          <Link className="title-page__home" to="/">
-            Back to home
-          </Link>
+          <div className="title-page__status-actions">
+            <button type="button" className="title-page__retry" onClick={reload}>
+              Try again
+            </button>
+            <Link className="title-page__home" to="/">
+              Back to home
+            </Link>
+          </div>
         </div>
       </div>
     )

@@ -1,0 +1,41 @@
+.media-card-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.media-card-skeleton__poster {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: 14px;
+}
+
+.media-card-skeleton__title {
+  width: 76%;
+  height: 14px;
+  border-radius: 7px;
+}
+
+.media-card-skeleton__meta {
+  width: 42%;
+  height: 11px;
+  margin-top: -4px;
+  border-radius: 6px;
+}
+
+.media-rail--skeleton,
+.media-grid--skeleton {
+  pointer-events: none;
+}
+
+.media-rail-skeleton__heading {
+  width: 150px;
+  height: 22px;
+  border-radius: 7px;
+}
+
+.media-rail-skeleton__track {
+  overflow: hidden;
+}

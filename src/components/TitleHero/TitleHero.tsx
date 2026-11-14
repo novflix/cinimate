@@ -8,6 +8,7 @@ import { AltArrowLeftIcon } from '@solar-icons/react/linear/alt-arrow-left'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { backdropUrl, daysUntil, posterUrl } from '@/api/tmdb'
 import type { TitleDetails } from '@/api/details'
+import SmartImage from '@/components/SmartImage/SmartImage'
 import './TitleHero.css'
 
 type TitleHeroProps = {
@@ -70,7 +71,7 @@ function TitleHero({ details }: TitleHeroProps) {
   return (
     <header className="title-hero">
       {imagePath ? (
-        <img
+        <SmartImage
           className="title-hero__image"
           src={
             details.backdrop

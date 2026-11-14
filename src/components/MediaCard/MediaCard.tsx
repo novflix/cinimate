@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BookmarkIcon } from '@solar-icons/react/bold/bookmark'
 import { EyeIcon } from '@solar-icons/react/bold/eye'
 import { StarIcon } from '@solar-icons/react/bold/star'
 import { Link } from 'react-router-dom'
+import { prefetchTitle } from '@/api/preload'
 import {
   formatDaysUntil,
   formatRating,
@@ -10,6 +11,7 @@ import {
   posterUrl,
   type PopularMediaItem,
 } from '@/api/tmdb'
+import SmartImage from '@/components/SmartImage/SmartImage'
 import { titlePath } from '@/navigation'
 import './MediaCard.css'
 
@@ -20,19 +22,51 @@ type MediaCardProps = {
    * keeps only the watchlist button: a title that is not out yet cannot be marked as watched.
    */
   variant?: 'default' | 'upcoming'
+  /** Above-the-fold cards load eagerly instead of waiting for the lazy-load threshold. */
+  priority?: boolean
 }
 
-function MediaCard({ item, variant = 'default' }: MediaCardProps) {
+const HOVER_INTENT_DELAY = 150
+
+function MediaCard({ item, variant = 'default', priority = false }: MediaCardProps) {
   const [watched, setWatched] = useState(false)
   const [watchlisted, setWatchlisted] = useState(false)
   // Cards are portrait, so the poster is the primary artwork; backdrop is only a fallback.
   const imagePath = item.poster ?? item.backdrop
 
+  // Hovering is only a hint: wait briefly so sweeping the pointer across a rail does not start
+  // a detail request for every card it crosses.
+  const intentTimer = useRef<number | null>(null)
+
+  const cancelIntent = () => {
+    if (intentTimer.current === null) return
+    window.clearTimeout(intentTimer.current)
+    intentTimer.current = null
+  }
+
+  const warmTitle = () => {
+    cancelIntent()
+    prefetchTitle(item.kind, item.id, { backdrop: item.backdrop, poster: item.poster })
+  }
+
+  const warmTitleSoon = () => {
+    if (intentTimer.current !== null) return
+    intentTimer.current = window.setTimeout(warmTitle, HOVER_INTENT_DELAY)
+  }
+
+  useEffect(() => cancelIntent, [])
+
   return (
-    <article className="media-card">
+    <article
+      className="media-card"
+      onPointerEnter={warmTitleSoon}
+      onPointerLeave={cancelIntent}
+      onFocusCapture={warmTitle}
+      onBlurCapture={cancelIntent}
+    >
       <div className="media-card__image-wrap">
         {imagePath ? (
-          <img
+          <SmartImage
             className="media-card__image"
             src={posterUrl(imagePath, 'w342')}
             srcSet={`${posterUrl(imagePath, 'w185')} 185w, ${posterUrl(imagePath, 'w342')} 342w, ${posterUrl(
@@ -41,7 +75,8 @@ function MediaCard({ item, variant = 'default' }: MediaCardProps) {
             )} 500w`}
             sizes="(max-width: 768px) 44vw, 205px"
             alt=""
-            loading="lazy"
+            loading={priority ? 'eager' : 'lazy'}
+            fetchPriority={priority ? 'high' : 'auto'}
             decoding="async"
           />
         ) : (

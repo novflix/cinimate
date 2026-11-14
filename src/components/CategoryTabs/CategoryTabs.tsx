@@ -5,9 +5,11 @@ import './CategoryTabs.css'
 type CategoryTabsProps = {
   activeId: CategoryId
   onChange: (id: CategoryId) => void
+  /** Called on hover/focus so the matching feed can start loading before the click. */
+  onIntent?: (id: CategoryId) => void
 }
 
-function CategoryTabs({ activeId, onChange }: CategoryTabsProps) {
+function CategoryTabs({ activeId, onChange, onIntent }: CategoryTabsProps) {
   const tabsRef = useRef<HTMLDivElement>(null)
   const indicatorRef = useRef<HTMLSpanElement>(null)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
@@ -105,6 +107,8 @@ function CategoryTabs({ activeId, onChange }: CategoryTabsProps) {
             aria-selected={isActive}
             tabIndex={isActive ? 0 : -1}
             onClick={() => onChange(category.id)}
+            onPointerEnter={() => onIntent?.(category.id)}
+            onFocus={() => onIntent?.(category.id)}
             onKeyDown={(event) => handleKeyDown(event, index)}
           >
             {category.label}

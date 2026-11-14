@@ -41,7 +41,7 @@ export const QUALITY = {
   /** Animation is full of tiny, barely-rated titles, so it gets a higher bar. */
   animationMinVotes: 50,
   /** Upcoming titles have no votes yet, so TMDB popularity is the quality signal instead. */
-  upcomingMinPopularity: 5,
+  upcomingMinPopularity: 5, /* parameter that clears out junk from the "coming soon" page: 1 removes all content, while 10 applies a more rigorous, thoroughly vetted cleanup. */
   upcomingObscureLanguageMinPopularity: 60,
   upcomingAnimationMinPopularity: 25,
 } as const
