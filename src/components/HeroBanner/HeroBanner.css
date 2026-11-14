@@ -108,21 +108,27 @@
   line-clamp: 3;
 }
 
+/* The title link stretches over the whole banner (same trick as the media cards), so a click
+   anywhere on it opens the title page. Buttons and the slide dots sit above it. */
 .hero__title-link {
   color: inherit;
   text-decoration: none;
 }
 
-.hero__title-link:hover {
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 6px;
+.hero__title-link::after {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  content: '';
 }
 
 .hero__title-link:focus-visible {
+  outline: none;
+}
+
+.hero:has(.hero__title-link:focus-visible) {
   outline: 2px solid var(--accent);
   outline-offset: 4px;
-  border-radius: 4px;
 }
 
 .hero__stats {
@@ -185,6 +191,8 @@
 }
 
 .hero__button {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
