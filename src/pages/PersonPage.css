@@ -1,0 +1,464 @@
+.person-page {
+  /* Shared inset of full-bleed content on phones (the filmography grid reads it too). */
+  --nav-inset: 24px;
+
+  padding-bottom: clamp(32px, 4vw, 64px);
+}
+
+.person-page__body {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(32px, 3.4vw, 52px);
+  width: var(--content-width);
+  margin: clamp(24px, 2.6vw, 40px) auto 0;
+  animation: content-reveal 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Hero: photo, the main facts and the biography. */
+.person-hero {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  grid-template-areas:
+    'photo info'
+    'bio bio';
+  gap: 20px 18px;
+}
+
+.person-hero__photo {
+  position: relative;
+  grid-area: photo;
+  align-self: start;
+  overflow: hidden;
+  aspect-ratio: 11 / 15;
+  border-radius: 18px;
+  background-color: var(--surface);
+}
+
+.person-hero__photo:has(img)::before {
+  position: absolute;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    rgb(255 255 255 / 4%) 30%,
+    rgb(255 255 255 / 9%) 50%,
+    rgb(255 255 255 / 4%) 70%
+  );
+  background-size: 220% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  transition: opacity 320ms ease;
+}
+
+.person-hero__photo:has(.smart-image[data-state='loaded'])::before,
+.person-hero__photo:has(.smart-image[data-state='error'])::before {
+  opacity: 0;
+  animation: none;
+}
+
+.person-hero__photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.person-hero__photo-empty {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: rgb(255 255 255 / 22%);
+}
+
+.person-hero__info {
+  display: flex;
+  flex-direction: column;
+  grid-area: info;
+  align-self: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.person-hero__name {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.person-hero__department {
+  color: var(--accent);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.person-hero__meta,
+.person-hero__counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+
+.person-hero__meta {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+}
+
+.person-hero__counts {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.person-hero__bio {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  grid-area: bio;
+  gap: 12px;
+  min-width: 0;
+}
+
+.person-hero__bio-text {
+  max-width: 78ch;
+  color: rgb(245 245 242 / 90%);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.person-hero__bio-text--clamped {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 7;
+  line-clamp: 7;
+}
+
+.person-hero__bio-toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 200ms ease;
+}
+
+.person-hero__bio-toggle:hover {
+  opacity: 0.8;
+}
+
+.person-hero__bio-toggle:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Filmography */
+.person-filmography {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.person-filmography__title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.person-filmography__count {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.person-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.person-grid__item {
+  min-width: 0;
+}
+
+.person-grid .media-card {
+  gap: 8px;
+}
+
+.person-grid .media-card__title {
+  font-size: 12px;
+}
+
+.person-grid .media-card__meta {
+  gap: 8px;
+  font-size: 11px;
+}
+
+.person-grid .media-card__image-wrap {
+  border-radius: 12px;
+}
+
+.person-filmography__more {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.person-filmography__more-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 52px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgb(255 255 255 / 10%), rgb(255 255 255 / 3%));
+  color: var(--fg);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease,
+    transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.person-filmography__more-button:hover {
+  border-color: rgb(255 255 255 / 24%);
+  background: linear-gradient(180deg, rgb(255 255 255 / 15%), rgb(255 255 255 / 6%));
+}
+
+.person-filmography__more-button:active {
+  transform: scale(0.98);
+}
+
+.person-filmography__more-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.person-filmography__more-count {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Loading skeleton: the same grid areas as the hero, so nothing jumps when the data arrives. */
+.person-skeleton__photo {
+  border-radius: 18px;
+}
+
+.person-skeleton__name {
+  width: 70%;
+  height: 26px;
+  border-radius: 8px;
+}
+
+.person-skeleton__line {
+  width: 92%;
+  height: 13px;
+  border-radius: 6px;
+}
+
+.person-skeleton__line--short {
+  width: 48%;
+}
+
+/* Errors */
+.person-page__status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 96px 24px;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+.person-page__home {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.person-page__status-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.person-page__retry {
+  height: 38px;
+  padding: 0 20px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 999px;
+  background-color: rgb(255 255 255 / 6%);
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease,
+    transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.person-page__retry:hover {
+  border-color: rgb(255 255 255 / 22%);
+  background-color: rgb(255 255 255 / 12%);
+}
+
+.person-page__retry:active {
+  transform: scale(0.97);
+}
+
+.person-page__retry:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Phone: full-bleed page with the shared inset, like the mockup. */
+@media (max-width: 768px) {
+  .person-page__body {
+    gap: 28px;
+    width: 100%;
+    margin-top: 24px;
+  }
+
+  .person-hero,
+  .person-filmography {
+    padding-inline: var(--nav-inset);
+  }
+}
+
+/* A very narrow phone gives the photo a bit less room. */
+@media (max-width: 360px) {
+  .person-hero {
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 16px 14px;
+  }
+}
+
+/* Tablet and desktop: the photo spans the full height of the hero, the text sits beside it. */
+@media (min-width: 769px) {
+  .person-hero {
+    grid-template-columns: clamp(200px, 19vw, 300px) minmax(0, 1fr);
+    grid-template-areas:
+      'photo info'
+      'photo bio';
+    grid-template-rows: auto 1fr;
+    gap: clamp(20px, 2.4vw, 32px) clamp(28px, 3.6vw, 60px);
+  }
+
+  .person-hero__photo {
+    border-radius: clamp(18px, 1.6vw, 26px);
+  }
+
+  .person-hero__info {
+    align-self: end;
+    gap: 10px;
+  }
+
+  .person-hero__name {
+    font-size: clamp(36px, 3.6vw, 58px);
+    letter-spacing: -0.03em;
+  }
+
+  .person-hero__department {
+    font-size: clamp(17px, 1.4vw, 21px);
+  }
+
+  .person-hero__meta {
+    margin-top: 4px;
+    gap: 4px 28px;
+    color: rgb(245 245 242 / 78%);
+    font-size: clamp(14px, 1.05vw, 16px);
+  }
+
+  .person-hero__counts {
+    gap: 4px 24px;
+    margin-top: 2px;
+    font-size: clamp(15px, 1.15vw, 17px);
+  }
+
+  .person-hero__bio {
+    align-self: start;
+    gap: 14px;
+  }
+
+  .person-hero__bio-text {
+    font-size: clamp(15px, 1.1vw, 17px);
+    line-height: 1.65;
+  }
+
+  .person-hero__bio-text--clamped {
+    -webkit-line-clamp: 8;
+    line-clamp: 8;
+  }
+
+  .person-hero__bio-toggle {
+    font-size: 15px;
+  }
+
+  .person-filmography {
+    gap: 24px;
+  }
+
+  .person-filmography__title {
+    font-size: clamp(22px, 1.8vw, 28px);
+  }
+
+  .person-filmography__count {
+    font-size: 16px;
+  }
+
+  .person-grid {
+    grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+    gap: 28px 16px;
+  }
+
+  .person-grid .media-card {
+    gap: 10px;
+  }
+
+  .person-grid .media-card__title {
+    font-size: 15px;
+  }
+
+  .person-grid .media-card__meta {
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  .person-grid .media-card__image-wrap {
+    border-radius: 14px;
+  }
+
+  .person-filmography__more-button {
+    width: min(100%, 360px);
+  }
+}

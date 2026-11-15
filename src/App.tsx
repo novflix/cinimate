@@ -7,6 +7,7 @@ import { homePath } from '@/navigation'
 import ForYouPage from '@/pages/ForYouPage'
 import HomePage from '@/pages/HomePage'
 import LoginPage from '@/pages/LoginPage'
+import PersonPage from '@/pages/PersonPage'
 import ProfilePage from '@/pages/ProfilePage'
 import RegisterPage from '@/pages/RegisterPage'
 import SearchPage from '@/pages/SearchPage'
@@ -36,6 +37,7 @@ function App() {
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="movie/:id" element={<TitlePage kind="movie" />} />
                 <Route path="series/:id" element={<TitlePage kind="series" />} />
+                <Route path="person/:id" element={<PersonPage />} />
                 <Route path="*" element={<Navigate to={homePath} replace />} />
               </Route>
             </Route>

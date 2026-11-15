@@ -1,6 +1,8 @@
+import { Link } from 'react-router-dom'
 import { profileUrl } from '@/api/tmdb'
 import type { TitlePerson } from '@/api/details'
 import SmartImage from '@/components/SmartImage/SmartImage'
+import { personPath } from '@/navigation'
 import './PersonCard.css'
 
 type PersonCardProps = {
@@ -29,7 +31,9 @@ function PersonCard({ person }: PersonCardProps) {
         ) : null}
       </div>
       <figcaption className="person-card__caption">
-        <span className="person-card__name">{person.name}</span>
+        <Link className="person-card__name" to={personPath(person.id)}>
+          {person.name}
+        </Link>
         {person.role && <span className="person-card__role">{person.role}</span>}
       </figcaption>
     </figure>

@@ -13,3 +13,8 @@ export const navItems = [
 export function titlePath(kind: MediaKind, id: number): string {
   return `/${kind}/${id}`
 }
+
+/** Route of a person's page (actor, director, ...): `/person/<id>`. */
+export function personPath(id: number): string {
+  return `/person/${id}`
+}

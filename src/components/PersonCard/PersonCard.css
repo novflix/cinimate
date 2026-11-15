@@ -1,4 +1,5 @@
 .person-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -53,10 +54,33 @@
 
 .person-card__name {
   overflow: hidden;
+  color: inherit;
   font-size: 15px;
   font-weight: 500;
+  text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: color 200ms ease;
+}
+
+/* The name link stretches over the whole card, so a click anywhere opens the person's page. */
+.person-card__name::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+}
+
+.person-card:hover .person-card__name {
+  color: var(--accent);
+}
+
+.person-card__name:focus-visible {
+  outline: none;
+}
+
+.person-card:has(.person-card__name:focus-visible) .person-card__photo {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .person-card__role {
