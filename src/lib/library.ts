@@ -1,4 +1,5 @@
 import type { MediaKind } from '@/api/tmdb'
+import { isValidRating } from '@/lib/rating'
 
 /** A title is identified by its TMDB id and kind; everything else is loaded from TMDB. */
 export type TitleRef = {
@@ -6,12 +7,19 @@ export type TitleRef = {
   id: number
 }
 
+/** What the rating dialog needs to know about a title; the name is only shown to the user. */
+export type RatingSubject = TitleRef & { title?: string }
+
 /** Title key → the time it was saved, in seconds since epoch. */
 export type SavedTitles = Record<string, number>
+
+/** Title key → the user's rating, a whole number from 1 to 10. */
+export type Ratings = Record<string, number>
 
 export type Library = {
   watchlist: SavedTitles
   watched: SavedTitles
+  ratings: Ratings
 }
 
 export type LibraryStats = {
@@ -21,17 +29,24 @@ export type LibraryStats = {
   series: number
 }
 
-export const emptyLibrary: Library = { watchlist: {}, watched: {} }
+export const emptyLibrary: Library = { watchlist: {}, watched: {}, ratings: {} }
 
 /**
  * Firestore document `users/{uid}`:
  *
- *   { w: { m603: 1794754892, s1399: 1794754901 }, d: { m550: 1794750000 } }
+ *   {
+ *     w: { m603: 1794754892, s1399: 1794754901 },
+ *     d: { m550: 1794750000 },
+ *     r: { m550: 9 },
+ *   }
  *
  * `w` is the watchlist and `d` the watched titles. A key is the kind (`m` movie, `s` series) plus
  * the TMDB id, the value is when the user saved it (only used for ordering, newest first).
- * That is all the app stores: about 20 bytes per title. Titles, posters and ratings come from
- * TMDB, so they are never stale and never copied into the database.
+ * `r` holds the user's own rating (1–10) of a watched title, with the same keys: it is the
+ * taste signal for the recommendations. A title can be watched without a rating (the user may
+ * skip it), and unmarking a title as watched removes its rating too.
+ * That is all the app stores: about 20 bytes per title. Titles and posters come from TMDB,
+ * so they are never stale and never copied into the database.
  */
 export function titleKey({ kind, id }: TitleRef): string {
   return `${kind === 'movie' ? 'm' : 's'}${id}`
@@ -64,11 +79,22 @@ function decodeSaved(value: unknown): SavedTitles {
   return saved
 }
 
+function decodeRatings(value: unknown): Ratings {
+  if (typeof value !== 'object' || value === null) return {}
+
+  const ratings: Ratings = {}
+  for (const [key, rating] of Object.entries(value)) {
+    if (parseTitleKey(key) && isValidRating(rating)) ratings[key] = rating
+  }
+
+  return ratings
+}
+
 export function decodeLibrary(data: unknown): Library {
   if (typeof data !== 'object' || data === null) return emptyLibrary
 
-  const { w, d } = data as { w?: unknown; d?: unknown }
-  return { watchlist: decodeSaved(w), watched: decodeSaved(d) }
+  const { w, d, r } = data as { w?: unknown; d?: unknown; r?: unknown }
+  return { watchlist: decodeSaved(w), watched: decodeSaved(d), ratings: decodeRatings(r) }
 }
 
 /** Newest save first. */

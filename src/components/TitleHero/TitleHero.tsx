@@ -1,15 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { ArrowRightUpIcon } from '@solar-icons/react/bold/arrow-right-up'
 import { BookmarkIcon } from '@solar-icons/react/bold/bookmark'
 import { EyeIcon } from '@solar-icons/react/bold/eye'
 import { LinkRoundIcon } from '@solar-icons/react/bold/link-round'
 import { MenuDotsVerticalIcon } from '@solar-icons/react/bold/menu-dots-vertical'
+import { StarIcon } from '@solar-icons/react/bold/star'
 import { AltArrowLeftIcon } from '@solar-icons/react/linear/alt-arrow-left'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { backdropUrl, daysUntil, posterUrl } from '@/api/tmdb'
 import type { TitleDetails } from '@/api/details'
 import SmartImage from '@/components/SmartImage/SmartImage'
 import { useLibrary } from '@/hooks/useLibrary'
+import { ratingColor } from '@/lib/rating'
 import { homePath } from '@/navigation'
 import './TitleHero.css'
 
@@ -21,9 +23,11 @@ function TitleHero({ details }: TitleHeroProps) {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const { isWatched, isWatchlisted, toggleWatched, toggleWatchlist } = useLibrary()
+  const { isWatched, isWatchlisted, toggleWatched, toggleWatchlist, getRating, promptRating } =
+    useLibrary()
   const watched = isWatched(details)
   const watchlisted = isWatchlisted(details)
+  const rating = watched ? getRating(details) : null
   const [menuOpen, setMenuOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -160,6 +164,23 @@ function TitleHero({ details }: TitleHeroProps) {
             >
               <EyeIcon size={20} aria-hidden="true" />
               Watched
+            </button>
+          )}
+          {!isUnreleased && watched && (
+            <button
+              type="button"
+              className="title-hero__rating"
+              style={
+                rating === null
+                  ? undefined
+                  : ({ '--rating-color': ratingColor(rating) } as CSSProperties)
+              }
+              aria-label={
+                rating === null ? 'Rate this title' : `Your rating: ${rating} out of 10. Change it`
+              }
+              onClick={() => promptRating(details)}
+            >
+              {rating === null ? <StarIcon size={20} aria-hidden="true" /> : rating}
             </button>
           )}
           <button

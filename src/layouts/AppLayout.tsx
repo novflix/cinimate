@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import MobileNav from '@/components/MobileNav/MobileNav'
 import Navbar from '@/components/Navbar/Navbar'
+import RatingModal from '@/components/RatingModal/RatingModal'
 
 function AppLayout() {
   return (
@@ -10,6 +11,7 @@ function AppLayout() {
         <Outlet />
       </main>
       <MobileNav />
+      <RatingModal />
     </div>
   )
 }

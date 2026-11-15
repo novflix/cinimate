@@ -1,5 +1,5 @@
 import { createContext } from 'react'
-import type { LibraryStats, TitleRef } from '@/lib/library'
+import type { LibraryStats, RatingSubject, TitleRef } from '@/lib/library'
 
 export interface LibraryContextValue {
   /** False until the user's saves have arrived, so the UI can avoid flashing empty lists. */
@@ -12,8 +12,20 @@ export interface LibraryContextValue {
   isWatchlisted: (title: TitleRef) => boolean
   isWatched: (title: TitleRef) => boolean
   toggleWatchlist: (title: TitleRef) => void
-  /** Marking a title as watched also takes it off the watchlist. */
-  toggleWatched: (title: TitleRef) => void
+  /**
+   * Marking a title as watched also takes it off the watchlist and asks the user to rate it
+   * (see `ratingPrompt`). Unmarking it removes its rating.
+   */
+  toggleWatched: (title: RatingSubject) => void
+  /** The user's rating (1–10) of a title, or null when it is not rated. */
+  getRating: (title: TitleRef) => number | null
+  /** Saves a rating for a title the user has watched. */
+  rateTitle: (title: TitleRef, rating: number) => void
+  /** The title the rating dialog is open for, or null while it is closed. */
+  ratingPrompt: RatingSubject | null
+  /** Opens the rating dialog, e.g. to change an earlier rating. */
+  promptRating: (title: RatingSubject) => void
+  dismissRatingPrompt: () => void
 }
 
 export const LibraryContext = createContext<LibraryContextValue | null>(null)

@@ -10,7 +10,9 @@ import {
   selectStats,
   titleKey,
   type Library,
+  type RatingSubject,
 } from '@/lib/library'
+import { isValidRating } from '@/lib/rating'
 import { LibraryContext, type LibraryContextValue } from './libraryContext'
 
 type LibraryState = { uid: string | null; library: Library; ready: boolean }
@@ -21,7 +23,7 @@ const READY_TIMEOUT = 4000
 const userRef = (uid: string) => doc(db, 'users', uid)
 
 /**
- * Keeps the signed-in user's watchlist and watched titles in Firestore (`users/{uid}`, see
+ * Keeps the signed-in user's watchlist, watched titles and ratings in Firestore (`users/{uid}`, see
  * `lib/library.ts` for the format). The live snapshot is the single source of truth: a click
  * writes to Firestore, and the SDK reports that write back immediately from its local cache, so
  * the UI updates instantly and also works offline.
@@ -31,9 +33,13 @@ function LibraryProvider({ children }: { children: ReactNode }) {
   const uid = user?.uid ?? null
 
   const [state, setState] = useState<LibraryState>({ uid, library: emptyLibrary, ready: !uid })
+  const [ratingPrompt, setRatingPrompt] = useState<RatingSubject | null>(null)
 
   // Another account signed in: drop the previous lists during render so no frame shows them.
-  if (state.uid !== uid) setState({ uid, library: emptyLibrary, ready: !uid })
+  if (state.uid !== uid) {
+    setState({ uid, library: emptyLibrary, ready: !uid })
+    setRatingPrompt(null)
+  }
   const isCurrent = state.uid === uid
   const library = isCurrent ? state.library : emptyLibrary
   const ready = isCurrent ? state.ready : !uid
@@ -70,7 +76,11 @@ function LibraryProvider({ children }: { children: ReactNode }) {
 
   // Only the keys that changed are sent, so two devices never overwrite each other's lists.
   const save = useCallback(
-    (changes: { w?: Record<string, unknown>; d?: Record<string, unknown> }) => {
+    (changes: {
+      w?: Record<string, unknown>
+      d?: Record<string, unknown>
+      r?: Record<string, unknown>
+    }) => {
       if (!uid) return
 
       void setDoc(userRef(uid), changes, { merge: true }).catch((error: unknown) =>
@@ -79,6 +89,8 @@ function LibraryProvider({ children }: { children: ReactNode }) {
     },
     [uid],
   )
+
+  const dismissRatingPrompt = useCallback(() => setRatingPrompt(null), [])
 
   const value = useMemo<LibraryContextValue>(() => {
     const watchlist = newestFirst(library.watchlist)
@@ -100,11 +112,33 @@ function LibraryProvider({ children }: { children: ReactNode }) {
       toggleWatched: (title) => {
         const key = titleKey(title)
 
-        if (key in library.watched) save({ d: { [key]: deleteField() } })
-        else save({ d: { [key]: nowInSeconds() }, w: { [key]: deleteField() } })
+        if (key in library.watched) {
+          // The rating only makes sense for a watched title, so it goes away with the mark.
+          save({
+            d: { [key]: deleteField() },
+            ...(key in library.ratings && { r: { [key]: deleteField() } }),
+          })
+          setRatingPrompt((current) => (current && titleKey(current) === key ? null : current))
+          return
+        }
+
+        save({ d: { [key]: nowInSeconds() }, w: { [key]: deleteField() } })
+        setRatingPrompt({ kind: title.kind, id: title.id, title: title.title })
       },
+
+      getRating: (title) => library.ratings[titleKey(title)] ?? null,
+
+      rateTitle: (title, rating) => {
+        if (!isValidRating(rating)) return
+        save({ r: { [titleKey(title)]: rating } })
+      },
+
+      ratingPrompt,
+      promptRating: (title) =>
+        setRatingPrompt({ kind: title.kind, id: title.id, title: title.title }),
+      dismissRatingPrompt,
     }
-  }, [library, ready, save])
+  }, [library, ready, save, ratingPrompt, dismissRatingPrompt])
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>
 }
