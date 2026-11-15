@@ -8,9 +8,9 @@
 
 .profile-header__banner {
   position: relative;
-  height: 100px;
+  height: 124px;
   overflow: hidden;
-  border-radius: 22px;
+  border-radius: 18px;
   background:
     radial-gradient(70% 140% at 12% 8%, #d4ff3a 0%, rgb(212 255 58 / 0%) 62%),
     radial-gradient(80% 150% at 92% 100%, #07a55a 0%, rgb(7 165 90 / 0%) 66%),
@@ -79,7 +79,7 @@
 
   .profile-header__banner {
     height: clamp(180px, 17vw, 260px);
-    border-radius: 28px;
+    border-radius: 24px;
   }
 
   .profile-header__corner {
