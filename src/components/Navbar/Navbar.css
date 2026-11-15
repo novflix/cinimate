@@ -103,6 +103,7 @@
   background: none;
   cursor: pointer;
   overflow: hidden;
+  text-decoration: none;
   transition:
     box-shadow 200ms ease,
     transform 200ms ease;
