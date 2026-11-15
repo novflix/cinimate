@@ -91,6 +91,7 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: end;
     gap: 6px 24px;
+    padding-top: 12px;
     padding-inline: clamp(16px, 2.4vw, 36px);
   }
 
