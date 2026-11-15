@@ -1,0 +1,26 @@
+.trending-today {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(14px, 1.4vw, 18px);
+  margin-top: clamp(28px, 3vw, 40px);
+  animation: content-reveal 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.trending-today__title {
+  font-size: clamp(19px, 1.5vw, 22px);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.trending-today__empty {
+  padding: 18px 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .trending-today {
+    gap: 14px;
+    margin-top: 26px;
+  }
+}

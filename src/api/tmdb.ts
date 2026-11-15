@@ -315,6 +315,46 @@ async function loadPopularMedia(): Promise<PopularMedia> {
 
 export const popularMediaResource = createResource(loadPopularMedia)
 
+// "Trending Today" is the day's TMDB trending list. It is a lighter quality gate than the
+// catalogue rails: a title can trend before it has votes (a new trailer, a premiere), so the
+// popularity-based gate is used instead of the released-titles gate.
+const TRENDING_PAGES = 2
+const TRENDING_LIMIT = 40
+
+async function loadTrendingToday(): Promise<PopularMediaItem[]> {
+  const responses = await Promise.all(
+    Array.from({ length: TRENDING_PAGES }, (_, index) =>
+      getJson<TmdbList<TmdbTrendingItem>>(
+        `/trending/all/day?language=en-US&page=${index + 1}`,
+      ),
+    ),
+  )
+
+  const seen = new Set<string>()
+  const rules = [...upcomingFilters, withoutGenres(GENRES.talkShow, GENRES.news)]
+
+  return applyFilters(
+    responses.flatMap((response) => response.results),
+    rules,
+  )
+    .filter((item) => item.media_type === 'movie' || item.media_type === 'tv')
+    .flatMap((item) => {
+      const kind: MediaKind = item.media_type === 'movie' ? 'movie' : 'series'
+      const key = `${kind}-${item.id}`
+      if (seen.has(key)) return []
+
+      seen.add(key)
+      const media = toPopularMediaItem(item, kind)
+      return media ? [media] : []
+    })
+    .slice(0, TRENDING_LIMIT)
+}
+
+export const trendingTodayResource = createResource(loadTrendingToday, {
+  staleTime: 5 * 60_000,
+})
+
+
 export type NowPlayingMedia = {
   movies: PopularMediaItem[]
   animation: PopularMediaItem[]

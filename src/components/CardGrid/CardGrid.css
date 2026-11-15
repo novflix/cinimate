@@ -1,0 +1,22 @@
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--card-grid-columns, 2), minmax(0, 1fr));
+  gap: 28px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card-grid__item {
+  min-width: 0;
+}
+
+.card-grid--skeleton {
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .card-grid {
+    gap: 20px 12px;
+  }
+}
