@@ -17,6 +17,10 @@ export interface LibraryContextValue {
    * (see `ratingPrompt`). Unmarking it removes its rating.
    */
   toggleWatched: (title: RatingSubject) => void
+  /** Deletes a title from the watchlist (and from Firestore), e.g. from the profile. */
+  removeFromWatchlist: (title: TitleRef) => void
+  /** Deletes a title from the watched list (and from Firestore) together with its rating. */
+  removeFromWatched: (title: TitleRef) => void
   /** The user's rating (1–10) of a title, or null when it is not rated. */
   getRating: (title: TitleRef) => number | null
   /** Saves a rating for a title the user has watched. */

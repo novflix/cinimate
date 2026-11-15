@@ -126,6 +126,24 @@ function LibraryProvider({ children }: { children: ReactNode }) {
         setRatingPrompt({ kind: title.kind, id: title.id, title: title.title })
       },
 
+      removeFromWatchlist: (title) => {
+        const key = titleKey(title)
+        if (!(key in library.watchlist)) return
+        save({ w: { [key]: deleteField() } })
+      },
+
+      removeFromWatched: (title) => {
+        const key = titleKey(title)
+        if (!(key in library.watched)) return
+
+        // Same as unmarking a title: the rating only makes sense for a watched title.
+        save({
+          d: { [key]: deleteField() },
+          ...(key in library.ratings && { r: { [key]: deleteField() } }),
+        })
+        setRatingPrompt((current) => (current && titleKey(current) === key ? null : current))
+      },
+
       getRating: (title) => library.ratings[titleKey(title)] ?? null,
 
       rateTitle: (title, rating) => {

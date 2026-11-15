@@ -37,8 +37,11 @@ function formatJoined(value: string | null): string | undefined {
 }
 
 /** The saved ids are turned into cards by TMDB; a skeleton holds each place until its card is in. */
-function ProfileGrid({ titles, label }: { titles: TitleRef[]; label: string }) {
+function ProfileGrid({ titles, tab }: { titles: TitleRef[]; tab: TabId }) {
   const { cards, hasFailed, retry } = useTitleCards(titles)
+  const { removeFromWatchlist, removeFromWatched } = useLibrary()
+  const label = tab === 'watchlist' ? 'Watchlist' : 'Watched'
+  const remove = tab === 'watchlist' ? removeFromWatchlist : removeFromWatched
 
   return (
     <>
@@ -47,7 +50,16 @@ function ProfileGrid({ titles, label }: { titles: TitleRef[]; label: string }) {
           .filter((card) => !card.failed)
           .map(({ ref, item }) => (
             <li className="profile-grid__item" key={titleKey(ref)}>
-              {item ? <MediaCard item={item} showActions={false} /> : <MediaCardSkeleton />}
+              {item ? (
+                <MediaCard
+                  item={item}
+                  showActions={false}
+                  onRemove={() => remove(ref)}
+                  removeLabel={`Remove ${item.title} from ${tab === 'watchlist' ? 'the watchlist' : 'watched'}`}
+                />
+              ) : (
+                <MediaCardSkeleton />
+              )}
             </li>
           ))}
       </ul>
@@ -152,7 +164,7 @@ function ProfilePage() {
         {!ready ? (
           <ProfileGridSkeleton />
         ) : titles.length > 0 ? (
-          <ProfileGrid titles={titles} label={activeTab === 'watchlist' ? 'Watchlist' : 'Watched'} />
+          <ProfileGrid titles={titles} tab={activeTab} />
         ) : (
           <div className="profile__empty">
             <p className="profile__empty-title">{empty.title}</p>

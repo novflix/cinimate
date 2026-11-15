@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { BookmarkIcon } from '@solar-icons/react/bold/bookmark'
 import { EyeIcon } from '@solar-icons/react/bold/eye'
 import { StarIcon } from '@solar-icons/react/bold/star'
+import { TrashBinTrashIcon } from '@solar-icons/react/bold/trash-bin-trash'
 import { Link } from 'react-router-dom'
 import { prefetchTitle } from '@/api/preload'
 import {
@@ -27,6 +28,13 @@ type MediaCardProps = {
   priority?: boolean
   /** Hide the watched / watchlist buttons, e.g. on the profile where the lists are only shown. */
   showActions?: boolean
+  /**
+   * Adds a trash button in the top-right corner (shown on hover on desktop, always on touch
+   * screens), e.g. on the profile to delete a saved title. Called when the button is pressed.
+   */
+  onRemove?: () => void
+  /** Accessible name of the trash button, e.g. "Remove X from the watchlist". */
+  removeLabel?: string
 }
 
 const HOVER_INTENT_DELAY = 150
@@ -36,6 +44,8 @@ function MediaCard({
   variant = 'default',
   priority = false,
   showActions = true,
+  onRemove,
+  removeLabel,
 }: MediaCardProps) {
   const { isWatched, isWatchlisted, toggleWatched, toggleWatchlist } = useLibrary()
   const watched = isWatched(item)
@@ -67,7 +77,7 @@ function MediaCard({
 
   return (
     <article
-      className="media-card"
+      className={`media-card${onRemove ? ' media-card--removable' : ''}`}
       onPointerEnter={warmTitleSoon}
       onPointerLeave={cancelIntent}
       onFocusCapture={warmTitle}
@@ -90,6 +100,17 @@ function MediaCard({
           />
         ) : (
           <div className="media-card__image media-card__image--placeholder" aria-hidden="true" />
+        )}
+        {onRemove && (
+          <button
+            className="media-card__remove"
+            type="button"
+            aria-label={removeLabel ?? `Remove ${item.title}`}
+            title="Remove"
+            onClick={onRemove}
+          >
+            <TrashBinTrashIcon size={18} aria-hidden="true" />
+          </button>
         )}
         {showActions && (
           <div className="media-card__actions">
