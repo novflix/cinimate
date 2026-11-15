@@ -39,7 +39,7 @@ function formatJoined(value: string | null): string | undefined {
 /** The saved ids are turned into cards by TMDB; a skeleton holds each place until its card is in. */
 function ProfileGrid({ titles, tab }: { titles: TitleRef[]; tab: TabId }) {
   const { cards, hasFailed, retry } = useTitleCards(titles)
-  const { removeFromWatchlist, removeFromWatched } = useLibrary()
+  const { removeFromWatchlist, removeFromWatched, getRating } = useLibrary()
   const label = tab === 'watchlist' ? 'Watchlist' : 'Watched'
   const remove = tab === 'watchlist' ? removeFromWatchlist : removeFromWatched
 
@@ -54,6 +54,7 @@ function ProfileGrid({ titles, tab }: { titles: TitleRef[]; tab: TabId }) {
                 <MediaCard
                   item={item}
                   showActions={false}
+                  userRating={tab === 'watched' ? getRating(ref) : null}
                   onRemove={() => remove(ref)}
                   removeLabel={`Remove ${item.title} from ${tab === 'watchlist' ? 'the watchlist' : 'watched'}`}
                 />

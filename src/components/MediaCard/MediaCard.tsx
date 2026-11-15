@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type CSSProperties } from 'react'
 import { BookmarkIcon } from '@solar-icons/react/bold/bookmark'
 import { EyeIcon } from '@solar-icons/react/bold/eye'
 import { StarIcon } from '@solar-icons/react/bold/star'
@@ -14,6 +14,7 @@ import {
 } from '@/api/tmdb'
 import SmartImage from '@/components/SmartImage/SmartImage'
 import { useLibrary } from '@/hooks/useLibrary'
+import { ratingColor } from '@/lib/rating'
 import { titlePath } from '@/navigation'
 import './MediaCard.css'
 
@@ -35,6 +36,11 @@ type MediaCardProps = {
   onRemove?: () => void
   /** Accessible name of the trash button, e.g. "Remove X from the watchlist". */
   removeLabel?: string
+  /**
+   * The user's own rating (1–10). When set, it replaces the TMDB rating in the card's meta line
+   * and is highlighted as a coloured badge, e.g. on the profile's Watched tab.
+   */
+  userRating?: number | null
 }
 
 const HOVER_INTENT_DELAY = 150
@@ -46,6 +52,7 @@ function MediaCard({
   showActions = true,
   onRemove,
   removeLabel,
+  userRating = null,
 }: MediaCardProps) {
   const { isWatched, isWatchlisted, toggleWatched, toggleWatchlist } = useLibrary()
   const watched = isWatched(item)
@@ -154,10 +161,22 @@ function MediaCard({
           </>
         ) : (
           <>
-            <span className="media-card__rating">
-              <StarIcon size={14} aria-hidden="true" />
-              {formatRating(item.rating)}
-            </span>
+            {userRating === null ? (
+              <span className="media-card__rating">
+                <StarIcon size={14} aria-hidden="true" />
+                {formatRating(item.rating)}
+              </span>
+            ) : (
+              <span
+                className="media-card__rating media-card__rating--user"
+                style={{ '--rating-color': ratingColor(userRating) } as CSSProperties}
+                title="Your rating"
+                aria-label={`Your rating: ${userRating} out of 10`}
+              >
+                <StarIcon size={13} aria-hidden="true" />
+                {userRating}
+              </span>
+            )}
             {item.year && <span className="media-card__year">{item.year}</span>}
           </>
         )}

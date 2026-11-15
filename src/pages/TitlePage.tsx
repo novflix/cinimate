@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   formatFullDate,
@@ -9,17 +9,39 @@ import {
   type TitleDetails,
 } from '@/api/details'
 import { formatRating, type MediaKind } from '@/api/tmdb'
+import { StarIcon } from '@solar-icons/react/bold/star'
 import MediaGrid from '@/components/MediaGrid/MediaGrid'
 import MediaRail from '@/components/MediaRail/MediaRail'
 import PersonCard, { personItemClass } from '@/components/PersonCard/PersonCard'
 import { MediaRailSkeleton, Skeleton } from '@/components/Skeleton/Skeleton'
 import TitleHero from '@/components/TitleHero/TitleHero'
+import { useLibrary } from '@/hooks/useLibrary'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useTitleDetails } from '@/hooks/useTitleDetails'
+import { ratingColor } from '@/lib/rating'
 import { homePath } from '@/navigation'
 import './TitlePage.css'
 
 type Fact = { label: string; value: string }
+
+/** The user's own score of a watched title, shown next to the TMDB rating in the meta line. */
+function UserRating({ details }: { details: TitleDetails }) {
+  const { isWatched, getRating } = useLibrary()
+  const rating = isWatched(details) ? getRating(details) : null
+
+  if (rating === null) return null
+
+  return (
+    <span
+      className="title-page__user-rating"
+      style={{ '--rating-color': ratingColor(rating) } as CSSProperties}
+      aria-label={`Your rating: ${rating} out of 10`}
+    >
+      <StarIcon size={13} aria-hidden="true" />
+      You {rating}
+    </span>
+  )
+}
 
 function buildFacts(details: TitleDetails): Fact[] {
   const isMovie = details.kind === 'movie'
@@ -152,6 +174,7 @@ function TitleView({ kind, id }: TitleViewProps) {
         <div className="title-page__summary">
           <div className="title-page__intro">
             <p className="title-page__meta">
+              <UserRating details={details} />
               {hasRating && (
                 <>
                   <span className="title-page__rating">{formatRating(details.rating)}</span>

@@ -71,6 +71,22 @@
   font-weight: 600;
 }
 
+/* The user's own rating: a badge tinted with the colour of the score. */
+.title-page__user-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 8px;
+  border: 1px solid color-mix(in srgb, var(--rating-color) 45%, transparent);
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--rating-color) 16%, transparent);
+  color: var(--rating-color);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+
 .title-page__overview {
   max-width: 64ch;
   margin-top: 16px;
