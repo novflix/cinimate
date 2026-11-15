@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import Avatar from '@/components/Avatar/Avatar'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -8,6 +9,13 @@ function formatDate(value: string | null): string {
 // Temporary page: raw account data plus a logout button. The real profile page comes later.
 function ProfilePage() {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  // Signing out lands on a clean login page, not one that sends the next user back to /profile.
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login', { replace: true })
+  }
 
   if (!user) return null
 
@@ -23,7 +31,7 @@ function ProfilePage() {
       <p>Registered: {formatDate(user.createdAt)}</p>
       <p>Last sign-in: {formatDate(user.lastLoginAt)}</p>
 
-      <button type="button" onClick={() => void logout()}>
+      <button type="button" onClick={() => void handleLogout()}>
         Log out
       </button>
     </section>

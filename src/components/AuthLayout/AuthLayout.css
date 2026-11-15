@@ -1,8 +1,10 @@
 .auth-page {
-  /* Drip column width: five columns fill a phone; on wider screens they keep a fixed size and
-     repeat across the whole page width. */
-  --drip-w: 20vw;
-  --wave-h: 101px;
+  /* Drip column width: six columns fill a phone; wider pages keep columns capped and repeat
+     them across the width. */
+  --drip-w: min(16cqw, 78px);
+  /* Tallest column, in multiples of its width. The drips are a small accent, not a subject. */
+  --drip-h: 1.4;
+  --wave-h: clamp(101px, 14cqw, 130px);
 
   position: relative;
   flex: 1;
@@ -10,6 +12,7 @@
   flex-direction: column;
   min-height: 100svh;
   overflow: hidden;
+  container-type: inline-size;
   background-color: var(--bg);
 }
 
@@ -17,8 +20,11 @@
 .auth-page__drips {
   position: absolute;
   inset: 0 0 auto;
+  z-index: 2;
   display: flex;
   align-items: flex-start;
+  /* Room below the tallest column for its gentle bobbing, so a column never gets clipped. */
+  padding-bottom: 16px;
   overflow: hidden;
   pointer-events: none;
 }
@@ -29,40 +35,55 @@
   content: '';
   position: absolute;
   inset: 0 0 auto;
-  height: calc(var(--drip-w) * 0.7);
+  height: calc(var(--drip-w) * 0.55);
   background-color: var(--accent);
 }
 
 .auth-page__drips span {
+  --bob: 6s;
+
   position: relative;
   flex: 0 0 var(--drip-w);
   background-color: var(--accent);
   border-radius: 0 0 999px 999px;
+  animation:
+    drip-fall 900ms cubic-bezier(0.34, 1.35, 0.64, 1) backwards,
+    drip-bob var(--bob) ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * 60ms), calc(1s + var(--i) * 250ms);
+}
+
+.auth-page__drips span:nth-child(3n) {
+  --bob: 7.5s;
+}
+
+.auth-page__drips span:nth-child(3n + 1) {
+  --bob: 5.5s;
 }
 
 .auth-page__drips span:nth-child(5n + 1) {
-  height: calc(var(--drip-w) * 1.5);
+  height: calc(var(--drip-w) * 1.1);
 }
 
 .auth-page__drips span:nth-child(5n + 2) {
-  height: calc(var(--drip-w) * 2);
-}
-
-.auth-page__drips span:nth-child(5n + 3) {
   height: calc(var(--drip-w) * 1.25);
 }
 
+.auth-page__drips span:nth-child(5n + 3) {
+  height: calc(var(--drip-w) * 0.95);
+}
+
 .auth-page__drips span:nth-child(5n + 4) {
-  height: calc(var(--drip-w) * 1.75);
+  height: calc(var(--drip-w) * 1.2);
 }
 
 .auth-page__drips span:nth-child(5n + 5) {
-  height: calc(var(--drip-w) * 2.1);
+  height: calc(var(--drip-w) * var(--drip-h));
 }
 
 .auth-page__wave {
   position: absolute;
   inset: auto 0 0;
+  z-index: 2;
   width: 100%;
   height: var(--wave-h);
   pointer-events: none;
@@ -76,6 +97,14 @@
   fill: #8fb314;
 }
 
+.auth-page__stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
 .auth-page__content {
   position: relative;
   display: flex;
@@ -84,7 +113,7 @@
   width: 100%;
   max-width: 490px;
   margin: 0 auto;
-  padding: calc(var(--drip-w) * 2.1 + 20px) 25px
+  padding: calc(var(--drip-w) * var(--drip-h) + 16px) 25px
     calc(var(--wave-h) + 30px + env(safe-area-inset-bottom));
 }
 
@@ -105,29 +134,151 @@
   text-align: center;
 }
 
-@media (min-width: 600px) {
-  .auth-page {
-    --drip-w: 96px;
-    --wave-h: clamp(110px, 10vw, 150px);
-  }
+/* Everything in the form rises into place one after another. */
+.auth-page__title,
+.auth-page__subtitle,
+.auth-form > * {
+  animation: auth-rise 650ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
+.auth-page__title {
+  animation-delay: 250ms;
+}
+
+.auth-page__subtitle {
+  animation-delay: 330ms;
+}
+
+.auth-form > :nth-child(1) {
+  animation-delay: 420ms;
+}
+
+.auth-form > :nth-child(2) {
+  animation-delay: 490ms;
+}
+
+.auth-form > :nth-child(3) {
+  animation-delay: 560ms;
+}
+
+.auth-form > :nth-child(4) {
+  animation-delay: 630ms;
+}
+
+.auth-form > :nth-child(n+5) {
+  animation-delay: 700ms;
+}
+
+/* Desktop: one scene. The poster wall fills the page behind everything, the lime wave frames the
+   bottom edge, and the form lives on a glass card next to the pitch. The drips stay a phone-only
+   detail. */
 @media (min-width: 900px) {
+  .auth-page {
+    --wave-h: 68px;
+  }
+
+  /* Phone-only flourish: on desktop the poster wall carries the top of the page. */
+  .auth-page__drips {
+    display: none;
+  }
+
+  .auth-page__stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(400px, 480px);
+    column-gap: clamp(40px, 7vw, 112px);
+    align-items: center;
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: clamp(24px, 4vh, 44px) clamp(32px, 5vw, 72px) calc(var(--wave-h) + 16px);
+  }
+
   .auth-page__content {
-    justify-content: center;
+    flex: none;
+    max-width: none;
+    margin: 0;
+    /* Every vertical measure tracks the viewport height, so the whole form card fits on screen
+       without scrolling even on short laptops. */
+    padding: clamp(24px, 3.4vh, 40px) clamp(32px, 3vw, 40px) clamp(20px, 3vh, 32px);
+    border: 1px solid rgb(245 245 242 / 10%);
+    border-radius: 28px;
+    background-color: rgb(10 10 10 / 72%);
+    backdrop-filter: blur(24px) saturate(140%);
+    box-shadow:
+      0 30px 80px rgb(0 0 0 / 55%),
+      0 0 60px rgb(194 254 31 / 6%);
   }
 
   .auth-page__title {
-    font-size: 40px;
+    font-size: clamp(30px, 4.2vh, 38px);
   }
 
   .auth-page__subtitle {
     max-width: 340px;
-    font-size: 16px;
+    margin-top: clamp(8px, 1.4vh, 12px);
+    font-size: clamp(15px, 1.9vh, 16px);
   }
 
-  .auth-form {
-    margin-top: 40px;
+  .auth-page .auth-form {
+    gap: clamp(12px, 1.9vh, 20px);
+    margin-top: clamp(18px, 3.2vh, 32px);
+  }
+
+  .auth-page .auth-field,
+  .auth-page .auth-submit {
+    height: clamp(46px, 5.6vh, 54px);
+  }
+
+  .auth-page .auth-submit {
+    margin-top: clamp(2px, 1vh, 8px);
+  }
+
+  .auth-page .auth-footer {
+    margin-top: clamp(0px, 0.5vh, 4px);
+    font-size: clamp(14px, 1.8vh, 15px);
+  }
+}
+
+/* Short desktop windows (e.g. a 768px-tall laptop with browser chrome): everything shrinks one
+   more step, so the register form still fits without a scrollbar. */
+@media (min-width: 900px) and (max-height: 660px) {
+  .auth-page {
+    --wave-h: 52px;
+  }
+
+  .auth-page__stage {
+    padding-top: 16px;
+    padding-bottom: calc(var(--wave-h) + 8px);
+  }
+
+  .auth-page__content {
+    padding: 20px clamp(28px, 3vw, 36px) 16px;
+  }
+
+  .auth-page__title {
+    font-size: 26px;
+  }
+
+  .auth-page__subtitle {
+    margin-top: 6px;
+  }
+
+  .auth-page .auth-form {
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .auth-page .auth-field,
+  .auth-page .auth-submit {
+    height: 42px;
+  }
+
+  .auth-page .auth-submit {
+    margin-top: 0;
+  }
+
+  .auth-page .auth-footer {
+    margin-top: -2px;
   }
 }
 
@@ -269,4 +420,36 @@
 .auth-footer .auth-link {
   margin-left: 6px;
   font-size: inherit;
+}
+
+@keyframes auth-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@keyframes drip-fall {
+  from {
+    transform: translateY(-100%);
+  }
+}
+
+@keyframes drip-bob {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-page__drips span,
+  .auth-page__title,
+  .auth-page__subtitle,
+  .auth-form > * {
+    animation: none;
+  }
 }

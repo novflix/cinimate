@@ -1,4 +1,7 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
+import AuthPitch from '@/components/AuthPitch/AuthPitch'
+import AuthShowcase from '@/components/AuthShowcase/AuthShowcase'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import './AuthLayout.css'
 
 // Enough columns to cover very wide screens; the extra ones are clipped.
@@ -11,19 +14,30 @@ interface AuthLayoutProps {
 }
 
 function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
+  // The poster wall only exists on desktop, so phones never download it.
+  const isDesktop = useMediaQuery('(min-width: 900px)')
+
   return (
     <div className="auth-page">
-      <div className="auth-page__drips" aria-hidden="true">
-        {Array.from({ length: DRIP_COUNT }, (_, index) => (
-          <span key={index} />
-        ))}
-      </div>
+      {isDesktop && <AuthShowcase />}
 
-      <main className="auth-page__content">
-        <h1 className="auth-page__title">{title}</h1>
-        <p className="auth-page__subtitle">{subtitle}</p>
-        {children}
-      </main>
+      {!isDesktop && (
+        <div className="auth-page__drips" aria-hidden="true">
+          {Array.from({ length: DRIP_COUNT }, (_, index) => (
+            <span key={index} style={{ '--i': index } as CSSProperties} />
+          ))}
+        </div>
+      )}
+
+      <div className="auth-page__stage">
+        {isDesktop && <AuthPitch />}
+
+        <main className="auth-page__content">
+          <h1 className="auth-page__title">{title}</h1>
+          <p className="auth-page__subtitle">{subtitle}</p>
+          {children}
+        </main>
+      </div>
 
       <svg
         className="auth-page__wave"

@@ -7,21 +7,32 @@ Movie and series discovery app built with React, Vite and TypeScript.
 ```bash
 npm install
 cp .env.example .env.local
-# add your TMDB read access token to .env.local
+# add your TMDB read access token and Firebase web config to .env.local
 npm run dev
 ```
 
 ### Environment
 
-The app loads popular movies and series from [TMDB](https://www.themoviedb.org/).
-Create a read access token in **Settings → API** and put it into `.env.local`:
+The app loads popular movies and series from [TMDB](https://www.themoviedb.org/) and signs users in
+with [Firebase Authentication](https://firebase.google.com/docs/auth).
+
+Create a TMDB read access token in **Settings → API** and copy the Firebase web app config from
+**Project settings → Your apps → Web app → SDK setup and configuration**. Put both into
+`.env.local`:
 
 ```env
 VITE_TMDB_TOKEN=your_tmdb_read_access_token
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_web_app_id
 ```
 
-`.env.local` is git-ignored. The token is bundled into the client, so use a
-read-only token and rotate it if it leaks.
+`.env.local` is git-ignored. Both the token and the Firebase config are bundled into the client, so
+use a read-only TMDB token, and protect the Firebase project with security rules and the
+authorized-domains list instead of relying on the config staying private.
 
 ## Scripts
 

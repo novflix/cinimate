@@ -17,23 +17,25 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {/* Guests only see the authentication screens. */}
           <Route element={<GuestOnly />}>
             <Route path="login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />
           </Route>
 
-          <Route element={<AppLayout />}>
-            <Route index element={<Navigate to={homePath} replace />} />
-            <Route path={homePath} element={<HomePage />} />
-            <Route path="recommendations" element={<ForYouPage />} />
-            <Route path="search" element={<SearchPage />} />
-            <Route element={<RequireAuth />}>
+          {/* The whole service is behind the login. */}
+          <Route element={<RequireAuth />}>
+            <Route element={<AppLayout />}>
+              <Route index element={<Navigate to={homePath} replace />} />
+              <Route path={homePath} element={<HomePage />} />
+              <Route path="recommendations" element={<ForYouPage />} />
+              <Route path="search" element={<SearchPage />} />
               <Route path="profile" element={<ProfilePage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="movie/:id" element={<TitlePage kind="movie" />} />
+              <Route path="series/:id" element={<TitlePage kind="series" />} />
+              <Route path="*" element={<Navigate to={homePath} replace />} />
             </Route>
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="movie/:id" element={<TitlePage kind="movie" />} />
-            <Route path="series/:id" element={<TitlePage kind="series" />} />
-            <Route path="*" element={<Navigate to={homePath} replace />} />
           </Route>
         </Routes>
       </BrowserRouter>
