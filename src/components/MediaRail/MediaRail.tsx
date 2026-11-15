@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
-import { AltArrowLeftIcon } from '@solar-icons/react/bold/alt-arrow-left'
-import { AltArrowRightIcon } from '@solar-icons/react/bold/alt-arrow-right'
+import CarouselArrow from '@/components/CarouselArrow/CarouselArrow'
 import MediaCard from '@/components/MediaCard/MediaCard'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
-import type { LiquidGlassController, LiquidGlassOptions } from '@/vendor/liquid-glass'
 import type { PopularMediaItem } from '@/api/tmdb'
 import './MediaRail.css'
 
@@ -19,24 +17,6 @@ type MediaRailProps<T> = {
   priority?: boolean
 }
 
-// Rail arrows float over the page, so backdrop mode refracts the live content behind them
-// in Chromium and falls back to frosted blur elsewhere — the same pattern as MobileNav.
-const arrowGlass: LiquidGlassOptions = {
-  mode: 'backdrop',
-  fit: true,
-  radius: 20,
-  refraction: 10,
-  bezel: 0.6,
-  curvature: 3,
-  ior: 1.45,
-  chroma: 0.04,
-  blur: 8,
-  specular: 0.45,
-  specularWidth: 1.5,
-  lightAngle: -90,
-  fallback: 'blur(16px) saturate(150%)',
-}
-
 function MediaRail<T = PopularMediaItem>({
   title,
   items,
@@ -48,8 +28,6 @@ function MediaRail<T = PopularMediaItem>({
   const headingId = useId()
   const isMobile = useMediaQuery('(max-width: 768px)')
   const trackRef = useRef<HTMLUListElement>(null)
-  const prevRef = useRef<HTMLButtonElement>(null)
-  const nextRef = useRef<HTMLButtonElement>(null)
   const [canScrollPrev, setCanScrollPrev] = useState(false)
   const [canScrollNext, setCanScrollNext] = useState(false)
 
@@ -73,27 +51,6 @@ function MediaRail<T = PopularMediaItem>({
     return () => observer.disconnect()
   }, [items, updateScrollState])
 
-  useEffect(() => {
-    if (isMobile) return
-
-    let disposed = false
-    let controllers: LiquidGlassController[] = []
-
-    void import('@/vendor/components.js').then(({ createGlass }) => {
-      if (disposed) return
-
-      controllers = [prevRef.current, nextRef.current]
-        .filter((element): element is HTMLButtonElement => element !== null)
-        .map((element) => createGlass(element, arrowGlass))
-    })
-
-    return () => {
-      disposed = true
-      controllers.forEach((controller) => controller.destroy())
-      controllers = []
-    }
-  }, [isMobile])
-
   const scrollByPage = (direction: 1 | -1) => {
     const track = trackRef.current
     if (!track) return
@@ -110,26 +67,18 @@ function MediaRail<T = PopularMediaItem>({
 
         {!isMobile && (
           <div className="media-rail__controls">
-            <button
-              ref={prevRef}
-              className="media-rail__arrow"
-              type="button"
+            <CarouselArrow
+              direction="back"
+              label={`Scroll ${title} back`}
               disabled={!canScrollPrev}
-              aria-label={`Scroll ${title} back`}
               onClick={() => scrollByPage(-1)}
-            >
-              <AltArrowLeftIcon size={20} aria-hidden="true" />
-            </button>
-            <button
-              ref={nextRef}
-              className="media-rail__arrow"
-              type="button"
+            />
+            <CarouselArrow
+              direction="forward"
+              label={`Scroll ${title} forward`}
               disabled={!canScrollNext}
-              aria-label={`Scroll ${title} forward`}
               onClick={() => scrollByPage(1)}
-            >
-              <AltArrowRightIcon size={20} aria-hidden="true" />
-            </button>
+            />
           </div>
         )}
       </div>

@@ -1,4 +1,6 @@
 .hero {
+  --hero-arrow-inset: clamp(12px, 1.2vw, 20px);
+
   position: relative;
   width: var(--content-width);
   height: clamp(420px, 34vw, 560px);
@@ -7,6 +9,8 @@
   isolation: isolate;
   border-radius: 20px;
   background-color: var(--bg);
+  /* Vertical page scrolling stays native; horizontal gestures reach the swipe handler. */
+  touch-action: pan-y;
 }
 
 .hero__slide {
@@ -247,6 +251,31 @@
 .hero__button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
+}
+
+/* Desktop-only slide arrows on the banner, visually matching the media rail controls. */
+.hero__arrow {
+  position: absolute;
+  top: calc(50% - 20px);
+  z-index: 4;
+}
+
+.hero__arrow--prev {
+  left: var(--hero-arrow-inset);
+}
+
+.hero__arrow--next {
+  right: var(--hero-arrow-inset);
+}
+
+/* Keep the info block clear of the left arrow on desktop. */
+@media (min-width: 769px) {
+  .hero__info {
+    padding-left: max(
+      clamp(28px, 4.2%, 56px),
+      calc(var(--hero-arrow-inset) + 40px + 20px)
+    );
+  }
 }
 
 .hero__dots {

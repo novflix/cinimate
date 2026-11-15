@@ -1,10 +1,18 @@
-import { useCallback, useEffect, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import { BookmarkIcon } from '@solar-icons/react/bold/bookmark'
 import { EyeIcon } from '@solar-icons/react/bold/eye'
 import { StarIcon } from '@solar-icons/react/bold/star'
 import { Link } from 'react-router-dom'
 import { canPrefetchInBackground, preloadImage, prefetchTitle } from '@/api/preload'
 import { backdropUrl, formatRating, formatVotes } from '@/api/tmdb'
+import CarouselArrow from '@/components/CarouselArrow/CarouselArrow'
 import SmartImage from '@/components/SmartImage/SmartImage'
 import { useHeroSlides } from '@/hooks/useHeroSlides'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
@@ -12,14 +20,21 @@ import { titlePath } from '@/navigation'
 import './HeroBanner.css'
 
 const AUTOPLAY_DELAY = 7000
+const SWIPE_THRESHOLD = 40
+/** A click fired right after a swipe would otherwise open the banner's title link. */
+const SWIPE_CLICK_GUARD = 500
 
 function HeroBanner() {
   const { slides, error, isLoading, reload } = useHeroSlides()
   const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
+  const isMobile = useMediaQuery('(max-width: 768px)')
 
   const [{ index, previous }, setSlideState] = useState({ index: 0, previous: -1 })
   const [isPaused, setIsPaused] = useState(false)
   const [cycle, setCycle] = useState(0)
+
+  const swipeStart = useRef<{ pointerId: number; x: number; y: number } | null>(null)
+  const lastSwipeAt = useRef(0)
 
   const goTo = useCallback((next: number) => {
     setSlideState((state) =>
@@ -69,6 +84,36 @@ function HeroBanner() {
   const slide = slides[index]
   const slideKey = `${slide.kind}-${slide.id}`
 
+  const handlePointerDown = (event: ReactPointerEvent<HTMLElement>) => {
+    if (event.pointerType !== 'touch') return
+    swipeStart.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY }
+  }
+
+  const handlePointerUp = (event: ReactPointerEvent<HTMLElement>) => {
+    const start = swipeStart.current
+    if (!start || start.pointerId !== event.pointerId) return
+    swipeStart.current = null
+
+    const dx = event.clientX - start.x
+    const dy = event.clientY - start.y
+
+    // Ignore vertical gestures (page scrolling) and taps.
+    if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) <= Math.abs(dy)) return
+
+    lastSwipeAt.current = Date.now()
+    goTo(dx < 0 ? (index + 1) % slides.length : (index - 1 + slides.length) % slides.length)
+  }
+
+  const handlePointerCancel = () => {
+    swipeStart.current = null
+  }
+
+  const handleClickCapture = (event: ReactMouseEvent<HTMLElement>) => {
+    if (Date.now() - lastSwipeAt.current > SWIPE_CLICK_GUARD) return
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
   return (
     <section
       className="hero"
@@ -76,6 +121,10 @@ function HeroBanner() {
       aria-label="Popular right now"
       onPointerEnter={() => setIsPaused(true)}
       onPointerLeave={() => setIsPaused(false)}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+      onClickCapture={handleClickCapture}
       onFocusCapture={() => setIsPaused(true)}
       onBlurCapture={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
@@ -156,6 +205,23 @@ function HeroBanner() {
           </button>
         </div>
       </div>
+
+      {!isMobile && slides.length > 1 && (
+        <>
+          <CarouselArrow
+            className="hero__arrow hero__arrow--prev"
+            direction="back"
+            label="Show previous slide"
+            onClick={() => goTo((index - 1 + slides.length) % slides.length)}
+          />
+          <CarouselArrow
+            className="hero__arrow hero__arrow--next"
+            direction="forward"
+            label="Show next slide"
+            onClick={() => goTo((index + 1) % slides.length)}
+          />
+        </>
+      )}
 
       <div className="hero__dots" role="group" aria-label="Choose a slide">
         {slides.map((item, itemIndex) => (
