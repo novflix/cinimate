@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { BookmarkIcon } from '@solar-icons/react/bold/bookmark'
 import { EyeIcon } from '@solar-icons/react/bold/eye'
 import { StarIcon } from '@solar-icons/react/bold/star'
@@ -12,6 +12,7 @@ import {
   type PopularMediaItem,
 } from '@/api/tmdb'
 import SmartImage from '@/components/SmartImage/SmartImage'
+import { useLibrary } from '@/hooks/useLibrary'
 import { titlePath } from '@/navigation'
 import './MediaCard.css'
 
@@ -24,13 +25,21 @@ type MediaCardProps = {
   variant?: 'default' | 'upcoming'
   /** Above-the-fold cards load eagerly instead of waiting for the lazy-load threshold. */
   priority?: boolean
+  /** Hide the watched / watchlist buttons, e.g. on the profile where the lists are only shown. */
+  showActions?: boolean
 }
 
 const HOVER_INTENT_DELAY = 150
 
-function MediaCard({ item, variant = 'default', priority = false }: MediaCardProps) {
-  const [watched, setWatched] = useState(false)
-  const [watchlisted, setWatchlisted] = useState(false)
+function MediaCard({
+  item,
+  variant = 'default',
+  priority = false,
+  showActions = true,
+}: MediaCardProps) {
+  const { isWatched, isWatchlisted, toggleWatched, toggleWatchlist } = useLibrary()
+  const watched = isWatched(item)
+  const watchlisted = isWatchlisted(item)
   // Cards are portrait, so the poster is the primary artwork; backdrop is only a fallback.
   const imagePath = item.poster ?? item.backdrop
 
@@ -82,32 +91,34 @@ function MediaCard({ item, variant = 'default', priority = false }: MediaCardPro
         ) : (
           <div className="media-card__image media-card__image--placeholder" aria-hidden="true" />
         )}
-        <div className="media-card__actions">
-          {variant !== 'upcoming' && (
+        {showActions && (
+          <div className="media-card__actions">
+            {variant !== 'upcoming' && (
+              <button
+                className={`media-card__action${watched ? ' media-card__action--active' : ''}`}
+                type="button"
+                aria-label={watched ? `Mark ${item.title} as unwatched` : `Mark ${item.title} as watched`}
+                aria-pressed={watched}
+                onClick={() => toggleWatched(item)}
+              >
+                <EyeIcon size={18} aria-hidden="true" />
+              </button>
+            )}
             <button
-              className={`media-card__action${watched ? ' media-card__action--active' : ''}`}
+              className={`media-card__action${watchlisted ? ' media-card__action--active' : ''}`}
               type="button"
-              aria-label={watched ? `Mark ${item.title} as unwatched` : `Mark ${item.title} as watched`}
-              aria-pressed={watched}
-              onClick={() => setWatched((value) => !value)}
+              aria-label={
+                watchlisted
+                  ? `Remove ${item.title} from the watchlist`
+                  : `Add ${item.title} to the watchlist`
+              }
+              aria-pressed={watchlisted}
+              onClick={() => toggleWatchlist(item)}
             >
-              <EyeIcon size={18} aria-hidden="true" />
+              <BookmarkIcon size={18} aria-hidden="true" />
             </button>
-          )}
-          <button
-            className={`media-card__action${watchlisted ? ' media-card__action--active' : ''}`}
-            type="button"
-            aria-label={
-              watchlisted
-                ? `Remove ${item.title} from the watchlist`
-                : `Add ${item.title} to the watchlist`
-            }
-            aria-pressed={watchlisted}
-            onClick={() => setWatchlisted((value) => !value)}
-          >
-            <BookmarkIcon size={18} aria-hidden="true" />
-          </button>
-        </div>
+          </div>
+        )}
       </div>
       <h3 className="media-card__title">
         <Link className="media-card__link" to={titlePath(item.kind, item.id)}>

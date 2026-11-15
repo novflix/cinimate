@@ -9,6 +9,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { backdropUrl, daysUntil, posterUrl } from '@/api/tmdb'
 import type { TitleDetails } from '@/api/details'
 import SmartImage from '@/components/SmartImage/SmartImage'
+import { useLibrary } from '@/hooks/useLibrary'
 import { homePath } from '@/navigation'
 import './TitleHero.css'
 
@@ -20,8 +21,9 @@ function TitleHero({ details }: TitleHeroProps) {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [watched, setWatched] = useState(false)
-  const [watchlisted, setWatchlisted] = useState(false)
+  const { isWatched, isWatchlisted, toggleWatched, toggleWatchlist } = useLibrary()
+  const watched = isWatched(details)
+  const watchlisted = isWatchlisted(details)
   const [menuOpen, setMenuOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -154,7 +156,7 @@ function TitleHero({ details }: TitleHeroProps) {
               type="button"
               className={`title-hero__button${watched ? ' title-hero__button--active' : ''}`}
               aria-pressed={watched}
-              onClick={() => setWatched((value) => !value)}
+              onClick={() => toggleWatched(details)}
             >
               <EyeIcon size={20} aria-hidden="true" />
               Watched
@@ -164,7 +166,7 @@ function TitleHero({ details }: TitleHeroProps) {
             type="button"
             className={`title-hero__button${watchlisted ? ' title-hero__button--active' : ''}`}
             aria-pressed={watchlisted}
-            onClick={() => setWatchlisted((value) => !value)}
+            onClick={() => toggleWatchlist(details)}
           >
             <BookmarkIcon size={20} aria-hidden="true" />
             Watchlist

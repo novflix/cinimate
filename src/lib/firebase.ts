@@ -1,5 +1,11 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore'
 
 // Firebase config values are not secrets: they end up in the client bundle anyway, and access is
 // enforced by Firebase security rules and the authorized-domains list in the console. They only
@@ -28,3 +34,18 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
+
+// The on-device cache makes the profile open instantly, works offline (writes are queued and
+// sent later) and means a page reload does not cost a server read when nothing has changed.
+// `initializeFirestore` throws if it runs twice (Vite hot reload), so reuse the first instance.
+function createDb() {
+  try {
+    return initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    })
+  } catch {
+    return getFirestore(app)
+  }
+}
+
+export const db = createDb()

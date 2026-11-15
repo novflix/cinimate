@@ -1,0 +1,120 @@
+.profile-header {
+  --avatar-size: 80px;
+  --avatar-ring: 5px;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-header__banner {
+  position: relative;
+  height: 100px;
+  overflow: hidden;
+  border-radius: 22px;
+  background:
+    radial-gradient(70% 140% at 12% 8%, #d4ff3a 0%, rgb(212 255 58 / 0%) 62%),
+    radial-gradient(80% 150% at 92% 100%, #07a55a 0%, rgb(7 165 90 / 0%) 66%),
+    linear-gradient(120deg, #a6e81c 0%, #12a24a 100%);
+}
+
+.profile-header__corner {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.profile-header__body {
+  display: grid;
+  gap: 14px;
+  padding-inline: 4px;
+}
+
+/* The ring is the page background, so the avatar looks cut out of the banner. */
+.profile-header__avatar {
+  position: relative;
+  z-index: 1;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  margin-top: calc(var(--avatar-size) / -2);
+  margin-left: 12px;
+  border: var(--avatar-ring) solid var(--bg);
+  border-radius: 50%;
+  background-color: var(--bg);
+  box-sizing: content-box;
+  overflow: hidden;
+  font-size: calc(var(--avatar-size) * 0.45);
+}
+
+.profile-header__avatar .avatar {
+  font-size: inherit;
+}
+
+.profile-header__identity {
+  min-width: 0;
+  margin-top: -2px;
+}
+
+.profile-header__name {
+  overflow: hidden;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-header__subtitle {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+@media (min-width: 769px) {
+  .profile-header {
+    --avatar-size: 128px;
+    --avatar-ring: 6px;
+  }
+
+  .profile-header__banner {
+    height: clamp(180px, 17vw, 260px);
+    border-radius: 28px;
+  }
+
+  .profile-header__corner {
+    top: 18px;
+    right: 18px;
+  }
+
+  .profile-header__body {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 6px 24px;
+    padding-inline: clamp(16px, 2.4vw, 36px);
+  }
+
+  .profile-header__avatar {
+    margin-top: calc(var(--avatar-size) / -2);
+    margin-left: 0;
+  }
+
+  .profile-header__identity {
+    align-self: end;
+    margin: 0 0 8px;
+  }
+
+  .profile-header__name {
+    font-size: clamp(26px, 2.2vw, 34px);
+  }
+
+  .profile-header__subtitle {
+    margin-top: 4px;
+    font-size: 14px;
+  }
+
+  .profile-header__aside {
+    align-self: end;
+    margin-bottom: 10px;
+  }
+}
