@@ -103,6 +103,41 @@
   animation: content-reveal 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Switching tabs: the panel drifts in from the side of the pressed tab, the cards follow in turn. */
+.profile__panel[data-direction='forward'] {
+  --panel-shift: 32px;
+  animation: profile-panel-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.profile__panel[data-direction='backward'] {
+  --panel-shift: -32px;
+  animation: profile-panel-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes profile-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--panel-shift));
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes profile-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .profile-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
@@ -114,6 +149,8 @@
 
 .profile-grid__item {
   min-width: 0;
+  animation: profile-item-in 460ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 32ms);
 }
 
 .profile__empty {
@@ -212,6 +249,14 @@
   .profile-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 20px 12px;
+  }
+
+  .profile__panel[data-direction='forward'] {
+    --panel-shift: 20px;
+  }
+
+  .profile__panel[data-direction='backward'] {
+    --panel-shift: -20px;
   }
 
   .profile-grid .media-card {

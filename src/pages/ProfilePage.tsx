@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { Logout2Icon } from '@solar-icons/react/linear/logout-2'
 import { ShuffleIcon } from '@solar-icons/react/linear/shuffle'
 import { Link, useNavigate } from 'react-router-dom'
@@ -37,6 +37,13 @@ function formatJoined(value: string | null): string | undefined {
 }
 
 /** The saved ids are turned into cards by TMDB; a skeleton holds each place until its card is in. */
+/** Cards fade in one after another; the delay is capped so a long list does not drag on. */
+const STAGGER_LIMIT = 14
+
+function staggerStyle(index: number): CSSProperties {
+  return { '--i': Math.min(index, STAGGER_LIMIT) } as CSSProperties
+}
+
 function ProfileGrid({ titles, tab }: { titles: TitleRef[]; tab: TabId }) {
   const { cards, hasFailed, retry } = useTitleCards(titles)
   const { removeFromWatchlist, removeFromWatched, getRating } = useLibrary()
@@ -48,8 +55,8 @@ function ProfileGrid({ titles, tab }: { titles: TitleRef[]; tab: TabId }) {
       <ul className="profile-grid" aria-label={label}>
         {cards
           .filter((card) => !card.failed)
-          .map(({ ref, item }) => (
-            <li className="profile-grid__item" key={titleKey(ref)}>
+          .map(({ ref, item }, index) => (
+            <li className="profile-grid__item" key={titleKey(ref)} style={staggerStyle(index)}>
               {item ? (
                 <MediaCard
                   item={item}
@@ -76,7 +83,7 @@ function ProfileGridSkeleton() {
   return (
     <ul className="profile-grid" aria-hidden="true">
       {Array.from({ length: SKELETON_COUNT }, (_, index) => (
-        <li className="profile-grid__item" key={index}>
+        <li className="profile-grid__item" key={index} style={staggerStyle(index)}>
           <MediaCardSkeleton />
         </li>
       ))}
@@ -89,6 +96,8 @@ function ProfilePage() {
   const { ready, watchlist, watched, stats } = useLibrary()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TabId>('watchlist')
+  // The panel slides in from the side of the tab that was pressed.
+  const [direction, setDirection] = useState<'forward' | 'backward' | null>(null)
 
   // Signing out lands on a clean login page, not one that sends the next user back to /profile.
   const handleLogout = async () => {
@@ -150,7 +159,14 @@ function ProfilePage() {
         <ProfileTabs
           tabs={tabs}
           activeId={activeTab}
-          onChange={(id) => setActiveTab(id as TabId)}
+          onChange={(id) => {
+            if (id === activeTab) return
+
+            const from = tabs.findIndex((tab) => tab.id === activeTab)
+            const to = tabs.findIndex((tab) => tab.id === id)
+            setDirection(to > from ? 'forward' : 'backward')
+            setActiveTab(id as TabId)
+          }}
           idPrefix="profile"
         />
       </div>
@@ -158,6 +174,7 @@ function ProfilePage() {
       <section
         key={activeTab}
         className="profile__panel"
+        data-direction={direction ?? undefined}
         role="tabpanel"
         id={`profile-panel-${activeTab}`}
         aria-labelledby={`profile-tab-${activeTab}`}
