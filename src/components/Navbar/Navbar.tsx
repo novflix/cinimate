@@ -1,11 +1,15 @@
 import { useLayoutEffect, useRef } from 'react'
+import { UserIcon } from '@solar-icons/react/bold/user'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import logo from '@/assets/logo.svg'
+import Avatar from '@/components/Avatar/Avatar'
+import { useAuth } from '@/hooks/useAuth'
 import { homePath, navItems } from '@/navigation'
 import './Navbar.css'
 
 function Navbar() {
   const { pathname } = useLocation()
+  const { user } = useAuth()
 
   const navRef = useRef<HTMLElement>(null)
   const indicatorRef = useRef<HTMLSpanElement>(null)
@@ -70,7 +74,13 @@ function Navbar() {
         ))}
       </nav>
 
-      <Link className="navbar__profile" to="/profile" aria-label="Open profile" />
+      <Link
+        className="navbar__profile"
+        to={user ? '/profile' : '/login'}
+        aria-label={user ? 'Open profile' : 'Log in'}
+      >
+        {user ? <Avatar name={user.displayName} /> : <UserIcon size={20} color="var(--accent)" />}
+      </Link>
     </header>
   )
 }
