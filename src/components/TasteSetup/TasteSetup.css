@@ -1,0 +1,174 @@
+.taste-setup {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: clamp(28px, 4vw, 48px);
+  padding: clamp(22px, 3vw, 40px);
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 5%) 0%, rgb(255 255 255 / 1.5%) 60%),
+    var(--surface);
+  animation: taste-setup-in 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* A soft lime haze in the corner gives the dark card some depth. */
+.taste-setup__glow {
+  position: absolute;
+  top: -120px;
+  right: -80px;
+  z-index: -1;
+  width: 420px;
+  height: 320px;
+  pointer-events: none;
+  background: radial-gradient(50% 50% at 50% 50%, rgb(194 254 31 / 16%), transparent 70%);
+  filter: blur(16px);
+}
+
+.taste-setup__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px 5px 9px;
+  border: 1px solid rgb(194 254 31 / 30%);
+  border-radius: 999px;
+  background-color: rgb(194 254 31 / 10%);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.taste-setup__title {
+  margin: 0;
+  font-size: clamp(26px, 3vw, 40px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.taste-setup__text {
+  max-width: 52ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(14px, 1.1vw, 16px);
+  line-height: 1.5;
+}
+
+.taste-setup__text strong {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Progress: one segment per title that is still needed. */
+.taste-setup__progress {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(100%, 420px);
+  margin-top: 4px;
+}
+
+.taste-setup__segments {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+}
+
+.taste-setup__segment {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background-color: rgb(255 255 255 / 9%);
+  transition:
+    background-color 360ms ease,
+    box-shadow 360ms ease;
+}
+
+.taste-setup__segment--filled {
+  background-color: var(--accent);
+  box-shadow: 0 0 14px rgb(194 254 31 / 45%);
+}
+
+.taste-setup__count {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.taste-setup__count strong {
+  color: var(--fg);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.taste-setup__steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.taste-setup__step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background-color: rgb(255 255 255 / 3%);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.taste-setup__step strong {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.taste-setup__step-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background-color: rgb(194 254 31 / 12%);
+  color: var(--accent);
+}
+
+@media (max-width: 768px) {
+  .taste-setup {
+    border-radius: 24px;
+  }
+
+  .taste-setup__steps {
+    grid-template-columns: 1fr;
+  }
+}
+
+@keyframes taste-setup-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .taste-setup {
+    animation: none;
+  }
+
+  .taste-setup__segment {
+    transition: none;
+  }
+}

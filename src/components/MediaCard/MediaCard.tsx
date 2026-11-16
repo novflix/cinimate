@@ -1,6 +1,7 @@
 import { useEffect, useRef, type CSSProperties } from 'react'
 import { BookmarkIcon } from '@solar-icons/react/bold/bookmark'
 import { EyeIcon } from '@solar-icons/react/bold/eye'
+import { EyeClosedIcon } from '@solar-icons/react/bold/eye-closed'
 import { StarIcon } from '@solar-icons/react/bold/star'
 import { TrashBinTrashIcon } from '@solar-icons/react/bold/trash-bin-trash'
 import { Link } from 'react-router-dom'
@@ -37,6 +38,11 @@ type MediaCardProps = {
   /** Accessible name of the trash button, e.g. "Remove X from the watchlist". */
   removeLabel?: string
   /**
+   * Adds a "Not interested" button in the top-right corner (hover on desktop, always visible on
+   * touch screens), used by the For You feed to hide a title and see less of the same.
+   */
+  onDismiss?: () => void
+  /**
    * The user's own rating (1–10). When set, it replaces the TMDB rating in the card's meta line
    * and is highlighted as a coloured badge, e.g. on the profile's Watched tab.
    */
@@ -52,6 +58,7 @@ function MediaCard({
   showActions = true,
   onRemove,
   removeLabel,
+  onDismiss,
   userRating = null,
 }: MediaCardProps) {
   const { isWatched, isWatchlisted, toggleWatched, toggleWatchlist } = useLibrary()
@@ -84,7 +91,7 @@ function MediaCard({
 
   return (
     <article
-      className={`media-card${onRemove ? ' media-card--removable' : ''}`}
+      className={`media-card${onRemove ? ' media-card--removable' : ''}${onDismiss ? ' media-card--dismissable' : ''}`}
       onPointerEnter={warmTitleSoon}
       onPointerLeave={cancelIntent}
       onFocusCapture={warmTitle}
@@ -117,6 +124,17 @@ function MediaCard({
             onClick={onRemove}
           >
             <TrashBinTrashIcon size={18} aria-hidden="true" />
+          </button>
+        )}
+        {onDismiss && (
+          <button
+            className="media-card__dismiss"
+            type="button"
+            aria-label={`Not interested in ${item.title}`}
+            title="Not interested"
+            onClick={onDismiss}
+          >
+            <EyeClosedIcon size={18} aria-hidden="true" />
           </button>
         )}
         {showActions && (

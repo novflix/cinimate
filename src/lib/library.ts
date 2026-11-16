@@ -20,6 +20,8 @@ export type Library = {
   watchlist: SavedTitles
   watched: SavedTitles
   ratings: Ratings
+  /** Titles the user marked "Not interested" in the For You feed. */
+  dismissed: SavedTitles
 }
 
 export type LibraryStats = {
@@ -29,7 +31,13 @@ export type LibraryStats = {
   series: number
 }
 
-export const emptyLibrary: Library = { watchlist: {}, watched: {}, ratings: {} }
+export const emptyLibrary: Library = { watchlist: {}, watched: {}, ratings: {}, dismissed: {} }
+
+/**
+ * The hidden list keeps the newest titles only, so the user document can never grow without
+ * bound (about 20 bytes per title, so even the cap is a few tens of kilobytes).
+ */
+export const MAX_DISMISSED = 1500
 
 /**
  * Firestore document `users/{uid}`:
@@ -38,6 +46,7 @@ export const emptyLibrary: Library = { watchlist: {}, watched: {}, ratings: {} }
  *     w: { m603: 1794754892, s1399: 1794754901 },
  *     d: { m550: 1794750000 },
  *     r: { m550: 9 },
+ *     x: { m27205: 1794760000 },
  *   }
  *
  * `w` is the watchlist and `d` the watched titles. A key is the kind (`m` movie, `s` series) plus
@@ -45,7 +54,9 @@ export const emptyLibrary: Library = { watchlist: {}, watched: {}, ratings: {} }
  * `r` holds the user's own rating (1–10) of a watched title, with the same keys: it is the
  * taste signal for the recommendations. A title can be watched without a rating (the user may
  * skip it), and unmarking a title as watched removes its rating too.
- * That is all the app stores: about 20 bytes per title. Titles and posters come from TMDB,
+ * `x` holds the titles the user hid from the For You feed ("Not interested"), in the same format
+ * as `w` and `d`. The recommendations treat them as a negative taste signal and never show them
+ * again. That is all the app stores: about 20 bytes per title. Titles and posters come from TMDB,
  * so they are never stale and never copied into the database.
  */
 export function titleKey({ kind, id }: TitleRef): string {
@@ -93,8 +104,13 @@ function decodeRatings(value: unknown): Ratings {
 export function decodeLibrary(data: unknown): Library {
   if (typeof data !== 'object' || data === null) return emptyLibrary
 
-  const { w, d, r } = data as { w?: unknown; d?: unknown; r?: unknown }
-  return { watchlist: decodeSaved(w), watched: decodeSaved(d), ratings: decodeRatings(r) }
+  const { w, d, r, x } = data as { w?: unknown; d?: unknown; r?: unknown; x?: unknown }
+  return {
+    watchlist: decodeSaved(w),
+    watched: decodeSaved(d),
+    ratings: decodeRatings(r),
+    dismissed: decodeSaved(x),
+  }
 }
 
 /** Newest save first. */

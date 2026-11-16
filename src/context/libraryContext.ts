@@ -1,5 +1,5 @@
 import { createContext } from 'react'
-import type { LibraryStats, RatingSubject, TitleRef } from '@/lib/library'
+import type { Library, LibraryStats, RatingSubject, TitleRef } from '@/lib/library'
 
 export interface LibraryContextValue {
   /** False until the user's saves have arrived, so the UI can avoid flashing empty lists. */
@@ -9,6 +9,8 @@ export interface LibraryContextValue {
   /** Titles already watched, newest first. */
   watched: TitleRef[]
   stats: LibraryStats
+  /** The raw saved data (with timestamps), the input of the recommendations. */
+  library: Library
   isWatchlisted: (title: TitleRef) => boolean
   isWatched: (title: TitleRef) => boolean
   toggleWatchlist: (title: TitleRef) => void
@@ -30,6 +32,12 @@ export interface LibraryContextValue {
   /** Opens the rating dialog, e.g. to change an earlier rating. */
   promptRating: (title: RatingSubject) => void
   dismissRatingPrompt: () => void
+  /** Whether the user hid this title from the For You feed. */
+  isDismissed: (title: TitleRef) => boolean
+  /** "Not interested": hides a title from the feed for good and teaches the feed to show less like it. */
+  dismissTitle: (title: TitleRef) => void
+  /** Takes a title back out of the hidden list (the Undo of "Not interested"). */
+  undoDismiss: (title: TitleRef) => void
 }
 
 export const LibraryContext = createContext<LibraryContextValue | null>(null)

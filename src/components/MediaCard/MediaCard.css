@@ -299,3 +299,72 @@
     pointer-events: auto;
   }
 }
+
+/* "Not interested" button (For You feed): same spot and look as the remove button, but it
+   warms to amber instead of red, since nothing is deleted and it can be undone. */
+.media-card--dismissable .media-card__image-wrap::after {
+  background:
+    linear-gradient(180deg, rgb(1 1 1 / 55%) 0%, transparent 38%),
+    linear-gradient(0deg, rgb(1 1 1 / 55%) 0%, transparent 42%);
+}
+
+.media-card__dismiss {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 50%;
+  background-color: rgb(12 13 10 / 58%);
+  color: var(--fg);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+  transition:
+    opacity 220ms ease,
+    background-color 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease,
+    transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Desktop: appears on hover; keyboard focus reveals it too. */
+.media-card:hover .media-card__dismiss,
+.media-card:focus-within .media-card__dismiss,
+.media-card__dismiss:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.media-card--dismissable:focus-within .media-card__image-wrap::after {
+  opacity: 1;
+}
+
+.media-card__dismiss:hover {
+  border-color: transparent;
+  background-color: #ffa93d;
+  color: #1a1000;
+}
+
+.media-card__dismiss:active {
+  transform: scale(0.94);
+}
+
+.media-card__dismiss:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Touch devices have no hover, so the button stays visible. */
+@media (hover: none), (max-width: 768px) {
+  .media-card__dismiss {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}

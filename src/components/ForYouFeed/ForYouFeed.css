@@ -1,0 +1,37 @@
+.for-you-feed__item {
+  min-width: 0;
+  animation: for-you-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Hiding: the card softly shrinks, blurs and fades while it still holds its place; the feed
+   then removes it and the other cards glide into the gap (see ForYouFeed.tsx). */
+.for-you-feed__item--leaving {
+  pointer-events: none;
+  animation: for-you-out 260ms cubic-bezier(0.32, 0, 0.67, 0) both;
+}
+
+.for-you-feed__sentinel {
+  height: 1px;
+}
+
+@keyframes for-you-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes for-you-out {
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+    filter: blur(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .for-you-feed__item,
+  .for-you-feed__item--leaving {
+    animation: none;
+  }
+}

@@ -59,6 +59,29 @@ Skeletons mirror the final layout, images fade in over a shimmer (`SmartImage`),
 failed feed has a retry button. Background prefetching is skipped when the browser is
 offline, in data-saver mode, or on a `2g` connection.
 
+## Recommendations (For You)
+
+`/recommendations` is an endless, personalised feed. Everything runs in the browser on top of
+TMDB and the user's saved library; there is no server.
+
+- **Signals** (`src/recommendations/signals.ts`): a rating (1–10) maps to −1…+1, "watched" without
+  a rating is +0.3, the watchlist +0.5 and "Not interested" −0.7. Old signals fade (half-life of
+  about six months).
+- **Taste profile** (`profile.ts`, `features.ts`): genres, keywords, directors/cast, language,
+  decade and kind, with shrinkage so one title cannot define a taste and damping for features
+  that are in almost everything. Title features are cached in `localStorage` for 14 days.
+- **Candidates** (`candidates.ts`): TMDB "also liked" lists of the favourites, `/discover` by the
+  best genres, keywords and people, plus exploration (trending, neighbouring genres). Users with
+  fewer than 3 positive signals get a general quality mix instead.
+- **Ranking** (`scoring.ts`, `engine.ts`): taste fit, seed support, Bayesian rating, popularity
+  and freshness, lowered for titles already shown. Each page is picked with MMR for variety, and
+  every 7th slot is an exploration pick. Watched, saved, rated and hidden titles never appear.
+- **Tuning**: every number is in `src/recommendations/config.ts`.
+
+Storage: "Not interested" is saved in the same `users/{uid}` document as `x` (`{ m603: <seconds> }`,
+capped at 1500 titles). Cached features and impressions stay on the device. No security-rule
+change is needed as long as the owner may read and write their own `users/{uid}` document.
+
 ## Structure
 
 ```
@@ -69,4 +92,5 @@ src/
   hooks/        media query and data hooks
   layouts/      app shell with LiquidGlass root
   pages/        route-level pages
+  recommendations/  taste profile, candidate plan, scoring and the feed engine
 ```

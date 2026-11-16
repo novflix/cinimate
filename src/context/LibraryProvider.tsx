@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase'
 import {
   decodeLibrary,
   emptyLibrary,
+  MAX_DISMISSED,
   newestFirst,
   nowInSeconds,
   selectStats,
@@ -80,6 +81,7 @@ function LibraryProvider({ children }: { children: ReactNode }) {
       w?: Record<string, unknown>
       d?: Record<string, unknown>
       r?: Record<string, unknown>
+      x?: Record<string, unknown>
     }) => {
       if (!uid) return
 
@@ -101,6 +103,7 @@ function LibraryProvider({ children }: { children: ReactNode }) {
       watchlist,
       watched,
       stats: selectStats(watchlist, watched),
+      library,
       isWatchlisted: (title) => titleKey(title) in library.watchlist,
       isWatched: (title) => titleKey(title) in library.watched,
 
@@ -149,6 +152,32 @@ function LibraryProvider({ children }: { children: ReactNode }) {
       rateTitle: (title, rating) => {
         if (!isValidRating(rating)) return
         save({ r: { [titleKey(title)]: rating } })
+      },
+
+      isDismissed: (title) => titleKey(title) in library.dismissed,
+
+      dismissTitle: (title) => {
+        const key = titleKey(title)
+        if (key in library.dismissed) return
+
+        // Past the cap the oldest hidden titles are forgotten, so the document stays small.
+        const overflow = Object.entries(library.dismissed)
+          .sort(([, a], [, b]) => a - b)
+          .slice(0, Math.max(0, Object.keys(library.dismissed).length + 1 - MAX_DISMISSED))
+          .map(([oldKey]) => oldKey)
+
+        save({
+          x: {
+            [key]: nowInSeconds(),
+            ...Object.fromEntries(overflow.map((oldKey) => [oldKey, deleteField()])),
+          },
+        })
+      },
+
+      undoDismiss: (title) => {
+        const key = titleKey(title)
+        if (!(key in library.dismissed)) return
+        save({ x: { [key]: deleteField() } })
       },
 
       ratingPrompt,
