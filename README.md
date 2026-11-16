@@ -70,15 +70,20 @@ TMDB and the user's saved library; there is no server.
 - **Taste profile** (`profile.ts`, `features.ts`): genres, keywords, directors/cast, language,
   decade and kind, with shrinkage so one title cannot define a taste and damping for features
   that are in almost everything. Actors are tracked separately from directors so recurring
-  faces in the saved and high-rated titles can drive their own recommendations. Title features
-  are cached in `localStorage` for 14 days.
+  faces in the saved and high-rated titles can drive their own recommendations. Seeds for the
+  "also liked" queries are chosen for spread as well as weight, so one franchise cannot fill the
+  whole plan, and the liked release years are tracked so freshness follows the user's era
+  instead of forcing old or new titles. Title features are cached in `localStorage` for 14 days.
 - **Candidates** (`candidates.ts`): TMDB "also liked" lists of the favourites, `/discover` by the
   best genres, keywords and people, one credits query per recurring actor, plus exploration
-  (trending, neighbouring genres). Users with fewer than 3 positive signals get a general
-  quality mix instead.
+  (trending, neighbouring genres). High-priority sources run first, and the engine rotates
+  through the plan so no long query starves the others. Users with fewer than 3 positive signals
+  get a general quality mix instead.
 - **Ranking** (`scoring.ts`, `engine.ts`): taste fit, seed support, Bayesian rating, popularity
-  and freshness, lowered for titles already shown. Each page is picked with MMR for variety, and
-  every 7th slot is an exploration pick. Watched, saved, rated and hidden titles never appear.
+  and era-aware freshness; titles that resemble hidden or low-rated ones are pushed down, and
+  titles already shown are lowered. Each page is picked with MMR using genres, year, kind,
+  language, rating and popularity for variety, and every 7th slot is an exploration pick.
+  Watched, saved, rated and hidden titles never appear.
 - **Tuning**: every number is in `src/recommendations/config.ts`.
 
 Storage: "Not interested" is saved in the same `users/{uid}` document as `x` (`{ m603: <seconds> }`,

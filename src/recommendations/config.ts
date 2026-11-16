@@ -28,6 +28,10 @@ export const REC = {
   negativeSeedLimit: 10,
   /** How many of the best-liked titles ask TMDB for "people who liked this also liked". */
   recommendationSeeds: 8,
+  /** A new seed this similar to one already chosen waits, so the seeds cover more than one corner. */
+  seedDiversity: 0.68,
+  /** Negative signals needed before candidate-level suppression gets its full weight. */
+  negativeConfidence: 3,
 
   /** Shrinkage of a feature's affinity: a single title cannot define a taste on its own. */
   shrinkage: 1.5,
@@ -41,6 +45,20 @@ export const REC = {
     quality: 0.2,
     popularity: 0.1,
     freshness: 0.05,
+    /** A title that looks like something hidden or rated low loses this share of its score. */
+    negative: 0.2,
+  },
+
+  /**
+   * Freshness is measured against the years the user actually likes: someone who only watches
+   * new releases should not get 1990s titles, while a retro fan keeps theirs.
+   */
+  freshness: {
+    /** Fallback half-life for profiles without enough dated titles. */
+    halfLifeYears: 20,
+    /** How far from the liked years still counts as a good match. */
+    minSpreadYears: 6,
+    maxSpreadYears: 20,
   },
 
   /** Actors the user keeps meeting in the titles they save and rate highly. */
@@ -66,6 +84,8 @@ export const REC = {
 
   /** How many pages of one TMDB query are walked through before it is considered used up. */
   maxPagesPerQuery: 6,
+  /** High-priority sources are fetched first; this many at most per refill. */
+  queriesPerRefill: 6,
   recommendationPages: 2,
   /** The pool is topped up until it holds this many titles per requested title. */
   poolPerRequested: 3,

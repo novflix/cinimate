@@ -55,11 +55,44 @@ function popularityScore(candidate: Candidate): number {
   return clamp(Math.log10(1 + candidate.popularity) / Math.log10(1 + 500))
 }
 
-function freshnessScore(candidate: Candidate): number {
+/**
+ * Freshness follows the years the user actually watches. A modern-only viewer gets almost
+ * nothing old; a retro fan keeps their era. Without enough dated titles it falls back to age.
+ */
+function freshnessScore(candidate: Candidate, profile: TasteProfile): number {
   if (!candidate.year) return 0.3
 
   const age = Math.max(0, new Date().getFullYear() - candidate.year)
-  return Math.exp(-age / 20)
+  const absolute = Math.exp(-age / REC.freshness.halfLifeYears)
+  const era = profile.era
+
+  if (era.confidence <= 0 || era.center <= 0) return absolute
+
+  const spread = Math.min(
+    REC.freshness.maxSpreadYears,
+    Math.max(REC.freshness.minSpreadYears, era.spread),
+  )
+  const fit = Math.exp(-Math.abs(candidate.year - era.center) / spread)
+
+  return absolute * (1 - era.confidence) + fit * era.confidence
+}
+
+/** How much the title looks like the corner of the taste the user hid or rated low. */
+function negativeScore(candidate: Candidate, profile: TasteProfile): number {
+  const { negative } = profile
+  if (negative.strength <= 0) return 0
+
+  const genres = candidate.genreIds.map((id) => Math.max(0, negative.genres.get(id) ?? 0))
+  const genre = genres.length ? Math.max(...genres) : 0
+  const kind = Math.max(0, negative.kinds[candidate.kind])
+  const language = candidate.language
+    ? Math.max(0, negative.languages.get(candidate.language) ?? 0)
+    : 0
+  const decade = candidate.year
+    ? Math.max(0, negative.decades.get(Math.floor(candidate.year / 10) * 10) ?? 0)
+    : 0
+
+  return clamp(0.65 * genre + 0.15 * kind + 0.1 * language + 0.1 * decade) * negative.strength
 }
 
 export function scoreCandidate(
@@ -82,7 +115,8 @@ export function scoreCandidate(
     w.seed * seed +
     qualityWeight * qualityScore(candidate) +
     w.popularity * popularityScore(candidate) +
-    w.freshness * freshnessScore(candidate)
+    w.freshness * freshnessScore(candidate, profile) -
+    w.negative * negativeScore(candidate, profile)
 
   return base * (1 - REC.impressionPenalty * Math.min(impressions, REC.maxImpressions))
 }
@@ -94,7 +128,21 @@ export function similarity(a: Candidate, b: Candidate): number {
   const genres = union ? shared / union : 0
 
   const sameKind = a.kind === b.kind ? 1 : 0
-  const sameDecade = Math.floor(a.year / 10) === Math.floor(b.year / 10) ? 1 : 0
+  const sameLanguage = a.language && b.language ? (a.language === b.language ? 1 : 0) : 0
+  const sameDecade = Math.floor(a.year / 10) === Math.floor(b.year / 10)
+  let year = sameDecade ? 1 : 0
+  if (a.year && b.year) year = Math.exp(-Math.abs(a.year - b.year) / 12)
+  const rating = 1 - Math.min(1, Math.abs(a.rating - b.rating) / 10)
+  const popularity =
+    1 -
+    Math.min(1, Math.abs(Math.log10(1 + a.popularity) - Math.log10(1 + b.popularity)) / 2)
 
-  return 0.7 * genres + 0.15 * sameKind + 0.15 * sameDecade
+  return (
+    0.55 * genres +
+    0.18 * year +
+    0.1 * sameKind +
+    0.08 * sameLanguage +
+    0.05 * rating +
+    0.04 * popularity
+  )
 }

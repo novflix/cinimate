@@ -56,6 +56,8 @@ export function createFeedEngine(uid: string): FeedEngine {
   const nextPage = new Map<string, number>()
   const finished = new Set<string>()
   const failures = new Map<string, number>()
+  const lastFetched = new Map<string, number>()
+  let refillCount = 0
 
   const known = new Map<string, Candidate>()
   const pool = new Map<string, Candidate>()
@@ -97,6 +99,7 @@ export function createFeedEngine(uid: string): FeedEngine {
     if (!sameQueries) {
       exhausted = false
       dry = 0
+      lastFetched.clear()
     }
   }
 
@@ -117,14 +120,25 @@ export function createFeedEngine(uid: string): FeedEngine {
   }
 
   async function refill() {
-    const active = plan.filter((query) => !finished.has(query.id))
+    // Within a round the strongest sources go first; between rounds every source gets a turn,
+    // so one long query cannot starve the rest of the plan.
+    const active = plan
+      .filter((query) => !finished.has(query.id))
+      .sort((a, b) => {
+        const turn = (lastFetched.get(a.id) ?? -1) - (lastFetched.get(b.id) ?? -1)
+        return turn !== 0 ? turn : b.priority - a.priority
+      })
+
     if (active.length === 0) {
       exhausted = true
       return
     }
 
+    const batch = active.slice(0, REC.queriesPerRefill)
+    refillCount += 1
+
     const settled = await Promise.allSettled(
-      active.map(async (query) => {
+      batch.map(async (query) => {
         const page = nextPage.get(query.id) ?? 1
         return { query, page, result: await fetchQueryPage(query, page) }
       }),
@@ -135,10 +149,12 @@ export function createFeedEngine(uid: string): FeedEngine {
     let firstError: unknown = null
 
     settled.forEach((outcome, index) => {
+      const id = batch[index].id
+      lastFetched.set(id, refillCount)
+
       if (outcome.status === 'rejected') {
         failed += 1
         firstError ??= outcome.reason
-        const id = active[index].id
         const count = (failures.get(id) ?? 0) + 1
         failures.set(id, count)
         if (count >= MAX_QUERY_FAILURES) finished.add(id)
@@ -153,11 +169,18 @@ export function createFeedEngine(uid: string): FeedEngine {
       })
     })
 
-    // Every request failed: surface it so the UI can offer a retry instead of ending the feed.
-    if (failed === active.length) throw firstError
+    // Every request failed and there is nothing else to try: surface it so the UI can offer a
+    // retry. If lower-priority queries remain, the next attempt gives them a turn instead.
+    if (failed === batch.length && batch.length === active.length) throw firstError
+
+    const untried = plan.some(
+      (query) => !finished.has(query.id) && !lastFetched.has(query.id),
+    )
 
     dry = added === 0 ? dry + 1 : 0
-    if (dry >= 2 || plan.every((query) => finished.has(query.id))) exhausted = true
+    if (plan.every((query) => finished.has(query.id)) || (dry >= 2 && !untried)) {
+      exhausted = true
+    }
   }
 
   function liveCount(library: Library): number {

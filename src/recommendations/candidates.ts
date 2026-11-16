@@ -19,9 +19,24 @@ export type Query = {
   seedWeight?: number
   /** Discover queries built from keywords / people: how strong that taste is (0–1). */
   evidence?: number
+  /** Higher-priority sources are fetched first when the pool needs more titles. */
+  priority: number
   maxPages: number
   fetchPage: (page: number) => Promise<QueryPage>
 }
+
+const PRIORITY = {
+  actor: 92,
+  seed: 90,
+  people: 80,
+  keyword: 70,
+  genre: 60,
+  genreTop: 58,
+  coldTop: 60,
+  coldPopular: 55,
+  trending: 30,
+  explore: 20,
+} as const
 
 type TmdbPage = { results: TmdbTrendingItem[]; total_pages?: number }
 type TmdbCredit = TmdbTrendingItem & { character?: string }
@@ -96,6 +111,7 @@ export function buildPlan(profile: TasteProfile): Query[] {
       kind: ref.kind,
       role: 'seed',
       seedWeight: weight,
+      priority: PRIORITY.seed + weight * 10,
       maxPages: REC.recommendationPages,
       fetchPage: (page) =>
         listPage(`/${tmdbKind(ref.kind)}/${ref.id}/recommendations?language=en-US&page=${page}`),
@@ -117,6 +133,7 @@ export function buildPlan(profile: TasteProfile): Query[] {
         id: `genres-pop:${kind}`,
         kind,
         role: 'discover',
+        priority: PRIORITY.genre,
         maxPages: REC.maxPagesPerQuery,
         fetchPage: (page) =>
           listPage(
@@ -134,6 +151,7 @@ export function buildPlan(profile: TasteProfile): Query[] {
         id: `genres-top:${kind}`,
         kind,
         role: 'discover',
+        priority: PRIORITY.genreTop,
         maxPages: REC.maxPagesPerQuery,
         fetchPage: (page) =>
           listPage(
@@ -153,6 +171,7 @@ export function buildPlan(profile: TasteProfile): Query[] {
         kind,
         role: 'discover',
         evidence: keywordEvidence,
+        priority: PRIORITY.keyword,
         maxPages: REC.maxPagesPerQuery,
         fetchPage: (page) =>
           listPage(
@@ -169,6 +188,7 @@ export function buildPlan(profile: TasteProfile): Query[] {
       kind: 'movie',
       role: 'discover',
       evidence: peopleEvidence,
+      priority: PRIORITY.people,
       maxPages: REC.maxPagesPerQuery,
       fetchPage: (page) =>
         listPage(
@@ -180,11 +200,14 @@ export function buildPlan(profile: TasteProfile): Query[] {
   // 5. Actors who keep appearing in liked titles get one query each. Their credits cover both
   //    movies and series, so a familiar face can pull a title in even when genres do not match.
   for (const actor of actors) {
+    const evidence = actorEvidence(profile, actor)
+
     queries.push({
       id: `actor:${actor}`,
       kind: 'mixed',
       role: 'discover',
-      evidence: actorEvidence(profile, actor),
+      evidence,
+      priority: PRIORITY.actor + evidence * 8,
       maxPages: 1,
       fetchPage: () => personCreditsPage(actor),
     })
@@ -200,6 +223,7 @@ export function buildPlan(profile: TasteProfile): Query[] {
         id: `adjacent:${kind}`,
         kind,
         role: 'explore',
+        priority: PRIORITY.explore,
         maxPages: REC.maxPagesPerQuery,
         fetchPage: (page) =>
           listPage(discover(kind, `sort_by=popularity.desc&with_genres=${adjacent.join('|')}`, page)),
@@ -219,6 +243,7 @@ export function buildColdPlan(): Query[] {
       id: `cold-top:${kind}`,
       kind,
       role: 'base',
+      priority: PRIORITY.coldTop,
       maxPages: REC.maxPagesPerQuery,
       fetchPage: (page) =>
         listPage(
@@ -233,6 +258,7 @@ export function buildColdPlan(): Query[] {
       id: `cold-pop:${kind}`,
       kind,
       role: 'base',
+      priority: PRIORITY.coldPopular,
       maxPages: REC.maxPagesPerQuery,
       fetchPage: (page) => listPage(discover(kind, 'sort_by=popularity.desc', page)),
     })
@@ -246,6 +272,7 @@ function trending(): Query {
     id: 'trending',
     kind: 'mixed',
     role: 'explore',
+    priority: PRIORITY.trending,
     maxPages: REC.maxPagesPerQuery,
     fetchPage: (page) => listPage(`/trending/all/week?language=en-US&page=${page}`),
   }

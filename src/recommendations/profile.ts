@@ -9,6 +9,26 @@ export type Affinity = Map<number, number>
 
 export type Seed = { ref: TitleRef; weight: number }
 
+/** The release years the user actually watches, learned from the titles they liked. */
+export type EraProfile = {
+  /** Weighted mean release year; 0 when there is nothing to learn from. */
+  center: number
+  /** Typical distance from `center`, in years. */
+  spread: number
+  /** 0–1: how much the estimate can be trusted. */
+  confidence: number
+}
+
+/** What the titles the user hid or rated low have in common. */
+export type NegativeTaste = {
+  genres: Affinity
+  languages: Map<string, number>
+  decades: Map<number, number>
+  kinds: Record<MediaKind, number>
+  /** 0–1: how many negative signals back the suppression. */
+  strength: number
+}
+
 export type TasteProfile = {
   genres: Affinity
   keywords: Affinity
@@ -22,6 +42,10 @@ export type TasteProfile = {
   languages: Map<string, number>
   decades: Map<number, number>
   kinds: Record<MediaKind, number>
+  /** The era the user actually watches, used to keep freshness personal instead of forcing age. */
+  era: EraProfile
+  /** The disliked corner of the taste, used to push similar candidates down. */
+  negative: NegativeTaste
   /** The best-liked titles, strongest first: they ask TMDB for similar ones. */
   seeds: Seed[]
   /** Number of weighted signals the profile is built from. */
@@ -57,6 +81,66 @@ function finish<K>({ sum, count }: Accumulator<K>, total: number): Map<K, number
   return result
 }
 
+function overlap(a: number[], b: number[]): number {
+  if (a.length === 0 || b.length === 0) return 0
+
+  const left = new Set(a)
+  const shared = b.filter((id) => left.has(id)).length
+  return shared / new Set([...a, ...b]).size
+}
+
+function seedSimilarity(a: TitleFeatures, b: TitleFeatures): number {
+  const year = a.year && b.year ? Math.exp(-Math.abs(a.year - b.year) / 12) : 0
+
+  return (
+    0.42 * overlap(a.genres, b.genres) +
+    0.22 * overlap(a.keywords, b.keywords) +
+    0.12 * overlap(a.people, b.people) +
+    0.1 * overlap(a.cast, b.cast) +
+    0.08 * (a.kind === b.kind ? 1 : 0) +
+    0.06 * year
+  )
+}
+
+/**
+ * Seeds are chosen for spread, not just weight: eight near-identical favourites would ask TMDB
+ * for eight near-identical lists. Weaker titles are still used when no diverse ones are left.
+ */
+function pickSeeds(signals: Signal[], features: Map<string, TitleFeatures>): Seed[] {
+  const ranked = signals
+    .filter((signal) => signal.weight > 0.25)
+    .sort((a, b) => b.weight - a.weight)
+
+  const seeds: Seed[] = []
+  const chosenKeys = new Set<string>()
+  const chosenFeatures: TitleFeatures[] = []
+
+  const take = (signal: Signal) => {
+    seeds.push({ ref: signal.ref, weight: signal.weight })
+    chosenKeys.add(signal.key)
+
+    const f = features.get(signal.key)
+    if (f) chosenFeatures.push(f)
+  }
+
+  for (const signal of ranked) {
+    if (seeds.length >= REC.recommendationSeeds) break
+
+    const f = features.get(signal.key)
+    if (!f || chosenFeatures.every((other) => seedSimilarity(f, other) < REC.seedDiversity)) {
+      take(signal)
+    }
+  }
+
+  // The diverse picks came from the strongest titles, but the feed still wants a full set.
+  for (const signal of ranked) {
+    if (seeds.length >= REC.recommendationSeeds) break
+    if (!chosenKeys.has(signal.key)) take(signal)
+  }
+
+  return seeds
+}
+
 export function buildProfile(
   signals: Signal[],
   features: Map<string, TitleFeatures>,
@@ -69,7 +153,17 @@ export function buildProfile(
   const decades = accumulator<number>()
   const kinds = accumulator<MediaKind>()
 
+  const negativeGenres = accumulator<number>()
+  const negativeLanguages = accumulator<string>()
+  const negativeDecades = accumulator<number>()
+  const negativeKinds = accumulator<MediaKind>()
+
   let total = 0
+  let positiveYearWeight = 0
+  let positiveYearSum = 0
+  let positiveYearSquares = 0
+  let positiveYearCount = 0
+  let negativeTotal = 0
 
   for (const { key, weight } of signals) {
     const f = features.get(key)
@@ -83,15 +177,32 @@ export function buildProfile(
     if (f.language) add(languages, f.language, weight)
     if (f.year) add(decades, Math.floor(f.year / 10) * 10, weight)
     add(kinds, f.kind, weight)
+
+    if (weight > 0) {
+      if (f.year) {
+        positiveYearWeight += weight
+        positiveYearSum += f.year * weight
+        positiveYearSquares += f.year * f.year * weight
+        positiveYearCount += 1
+      }
+    } else if (weight < 0) {
+      negativeTotal += 1
+      const magnitude = -weight
+
+      f.genres.forEach((id) => add(negativeGenres, id, magnitude))
+      if (f.language) add(negativeLanguages, f.language, magnitude)
+      if (f.year) add(negativeDecades, Math.floor(f.year / 10) * 10, magnitude)
+      add(negativeKinds, f.kind, magnitude)
+    }
   }
 
   const kindAffinity = finish(kinds, total)
-
-  const seeds = signals
-    .filter((signal) => signal.weight > 0.25)
-    .sort((a, b) => b.weight - a.weight)
-    .slice(0, REC.recommendationSeeds)
-    .map(({ ref, weight }) => ({ ref, weight }))
+  const negativeKindAffinity = finish(negativeKinds, negativeTotal)
+  const eraCenter = positiveYearWeight > 0 ? positiveYearSum / positiveYearWeight : 0
+  const eraVariance =
+    positiveYearWeight > 0
+      ? Math.max(0, positiveYearSquares / positiveYearWeight - eraCenter * eraCenter)
+      : 0
 
   return {
     genres: finish(genres, total),
@@ -104,7 +215,22 @@ export function buildProfile(
     languages: finish(languages, total),
     decades: finish(decades, total),
     kinds: { movie: kindAffinity.get('movie') ?? 0, series: kindAffinity.get('series') ?? 0 },
-    seeds,
+    era: {
+      center: eraCenter,
+      spread: Math.sqrt(eraVariance),
+      confidence: Math.min(1, positiveYearCount / REC.fullConfidenceSignals),
+    },
+    negative: {
+      genres: finish(negativeGenres, negativeTotal),
+      languages: finish(negativeLanguages, negativeTotal),
+      decades: finish(negativeDecades, negativeTotal),
+      kinds: {
+        movie: negativeKindAffinity.get('movie') ?? 0,
+        series: negativeKindAffinity.get('series') ?? 0,
+      },
+      strength: Math.min(1, negativeTotal / REC.negativeConfidence),
+    },
+    seeds: pickSeeds(signals, features),
     signalCount: signals.length,
     confidence: Math.min(1, signals.length / REC.fullConfidenceSignals),
   }
