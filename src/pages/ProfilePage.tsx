@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from 'react'
-import { Logout2Icon } from '@solar-icons/react/linear/logout-2'
+import { SettingsIcon } from '@solar-icons/react/linear/settings'
 import { ShuffleIcon } from '@solar-icons/react/linear/shuffle'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import FeedStatus from '@/components/FeedStatus/FeedStatus'
 import MediaCard from '@/components/MediaCard/MediaCard'
 import ProfileHeader from '@/components/ProfileHeader/ProfileHeader'
@@ -92,19 +92,12 @@ function ProfileGridSkeleton() {
 }
 
 function ProfilePage() {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const { ready, watchlist, watched, stats } = useLibrary()
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab: TabId = searchParams.get('tab') === 'watched' ? 'watched' : 'watchlist'
   // The panel slides in from the side of the tab that was pressed.
   const [direction, setDirection] = useState<'forward' | 'backward' | null>(null)
-
-  // Signing out lands on a clean login page, not one that sends the next user back to /profile.
-  const handleLogout = async () => {
-    await logout()
-    navigate('/login', { replace: true })
-  }
 
   if (!user) return null
 
@@ -129,15 +122,9 @@ function ProfilePage() {
         name={user.displayName}
         subtitle={formatJoined(user.createdAt)}
         corner={
-          <button
-            type="button"
-            className="profile__logout"
-            aria-label="Log out"
-            title="Log out"
-            onClick={() => void handleLogout()}
-          >
-            <Logout2Icon size={18} aria-hidden="true" />
-          </button>
+          <Link className="profile__settings" to="/settings" aria-label="Settings" title="Settings">
+            <SettingsIcon size={18} aria-hidden="true" />
+          </Link>
         }
       >
         <dl className="profile-stats">
