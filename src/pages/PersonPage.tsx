@@ -192,7 +192,7 @@ function PersonView({ id }: { id: number }) {
             <ul className="person-grid" aria-label="Filmography">
               {visible.map((item) => (
                 <li className="person-grid__item" key={`${item.kind}-${item.id}`}>
-                  <MediaCard item={item} showActions={false} />
+                  <MediaCard item={item} />
                 </li>
               ))}
             </ul>
