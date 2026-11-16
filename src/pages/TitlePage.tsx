@@ -24,6 +24,9 @@ import './TitlePage.css'
 
 type Fact = { label: string; value: string }
 
+/** Titles whose similar grid was opened, kept while the app is open so a return lands in place. */
+const expandedSimilar = new Set<string>()
+
 /** The user's own score of a watched title, shown next to the TMDB rating in the meta line. */
 function UserRating({ details }: { details: TitleDetails }) {
   const { isWatched, getRating } = useLibrary()
@@ -114,12 +117,12 @@ function TitlePageSkeleton() {
 function TitleView({ kind, id }: TitleViewProps) {
   const { details, error, isLoading, reload } = useTitleDetails(kind, id)
   const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
-  const [showSimilar, setShowSimilar] = useState(false)
+  const similarKey = `${kind}-${id}`
+  const [showSimilar, setShowSimilar] = useState(() => expandedSimilar.has(similarKey))
+  // Only a click scrolls to the grid; a restored open grid must not pull the page away from the
+  // position the scroll restorer is about to apply.
+  const similarJustOpened = useRef(false)
   const similarRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [])
 
   useEffect(() => {
     if (!details) return
@@ -133,7 +136,8 @@ function TitleView({ kind, id }: TitleViewProps) {
   }, [details])
 
   useEffect(() => {
-    if (!showSimilar) return
+    if (!showSimilar || !similarJustOpened.current) return
+    similarJustOpened.current = false
 
     similarRef.current?.scrollIntoView({
       behavior: prefersReducedMotion ? 'auto' : 'smooth',
@@ -229,7 +233,12 @@ function TitleView({ kind, id }: TitleViewProps) {
                 type="button"
                 className="title-page__similar-button"
                 aria-expanded={showSimilar}
-                onClick={() => setShowSimilar((value) => !value)}
+                onClick={() => {
+                  similarJustOpened.current = !showSimilar
+                  if (showSimilar) expandedSimilar.delete(similarKey)
+                  else expandedSimilar.add(similarKey)
+                  setShowSimilar((value) => !value)
+                }}
               >
                 {showSimilar ? 'Hide Similar' : 'Watch Similar'}
               </button>

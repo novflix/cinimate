@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { UserRoundedIcon } from '@solar-icons/react/bold/user-rounded'
 import { Link, useParams } from 'react-router-dom'
 import { formatMovieCount, formatSeriesCount, type PersonDetails } from '@/api/person'
@@ -13,6 +13,9 @@ import './PersonPage.css'
 /** Titles shown at first and added by each press of "Show more". Divisible by 2, 3, 4, 6 and 8. */
 const PAGE_SIZE = 24
 const SKELETON_COUNT = 9
+
+/** How many filmography titles each person had expanded, kept while the app is open. */
+const expandedFilmographies = new Map<number, number>()
 
 /** `1950-01-01`, or `1950-01-01 – 2020-02-03` for a person who has died. */
 function formatLifespan(person: PersonDetails): string {
@@ -114,11 +117,17 @@ function PersonSkeleton() {
 
 function PersonView({ id }: { id: number }) {
   const { person, error, isLoading, reload } = usePersonDetails(id)
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const [visibleCount, setVisibleCount] = useState(
+    () => expandedFilmographies.get(id) ?? PAGE_SIZE,
+  )
 
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [])
+  const showMore = () => {
+    setVisibleCount((count) => {
+      const next = count + PAGE_SIZE
+      expandedFilmographies.set(id, next)
+      return next
+    })
+  }
 
   if (isLoading) return <PersonSkeleton />
 
@@ -193,7 +202,7 @@ function PersonView({ id }: { id: number }) {
                 <button
                   type="button"
                   className="person-filmography__more-button"
-                  onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+                  onClick={showMore}
                 >
                   Show more
                   <span className="person-filmography__more-count">{remaining}</span>

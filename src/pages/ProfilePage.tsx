@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from 'react'
 import { Logout2Icon } from '@solar-icons/react/linear/logout-2'
 import { ShuffleIcon } from '@solar-icons/react/linear/shuffle'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import FeedStatus from '@/components/FeedStatus/FeedStatus'
 import MediaCard from '@/components/MediaCard/MediaCard'
 import ProfileHeader from '@/components/ProfileHeader/ProfileHeader'
@@ -95,7 +95,8 @@ function ProfilePage() {
   const { user, logout } = useAuth()
   const { ready, watchlist, watched, stats } = useLibrary()
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<TabId>('watchlist')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab: TabId = searchParams.get('tab') === 'watched' ? 'watched' : 'watchlist'
   // The panel slides in from the side of the tab that was pressed.
   const [direction, setDirection] = useState<'forward' | 'backward' | null>(null)
 
@@ -160,12 +161,18 @@ function ProfilePage() {
           tabs={tabs}
           activeId={activeTab}
           onChange={(id) => {
-            if (id === activeTab) return
+            const tab = id as TabId
+            if (tab === activeTab) return
 
-            const from = tabs.findIndex((tab) => tab.id === activeTab)
-            const to = tabs.findIndex((tab) => tab.id === id)
+            const from = tabs.findIndex((item) => item.id === activeTab)
+            const to = tabs.findIndex((item) => item.id === tab)
             setDirection(to > from ? 'forward' : 'backward')
-            setActiveTab(id as TabId)
+
+            // Keeping the tab in the URL restores it when a title page is closed.
+            const next = new URLSearchParams(searchParams)
+            if (tab === 'watchlist') next.delete('tab')
+            else next.set('tab', tab)
+            setSearchParams(next, { replace: true })
           }}
           idPrefix="profile"
         />

@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { GuestOnly, RequireAuth } from '@/components/AuthGuard/AuthGuard'
+import RouteScrollRestoration from '@/components/RouteScrollRestoration/RouteScrollRestoration'
 import AuthProvider from '@/context/AuthProvider'
 import LibraryProvider from '@/context/LibraryProvider'
 import AppLayout from '@/layouts/AppLayout'
@@ -19,6 +20,7 @@ function App() {
     <AuthProvider>
       <LibraryProvider>
         <BrowserRouter>
+          <RouteScrollRestoration />
           <Routes>
             {/* Guests only see the authentication screens. */}
             <Route element={<GuestOnly />}>

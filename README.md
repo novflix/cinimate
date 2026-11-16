@@ -59,6 +59,24 @@ Skeletons mirror the final layout, images fade in over a shimmer (`SmartImage`),
 failed feed has a retry button. Background prefetching is skipped when the browser is
 offline, in data-saver mode, or on a `2g` connection.
 
+## Navigation and scroll restoration
+
+Opening a title and coming back should feel like closing a page, not reloading the app:
+
+- The current tab or search query lives in the URL (`/home?tab=coming-soon`,
+  `/profile?tab=watched`, `/search?q=...`). Those updates replace the history entry, so the
+  tab is not lost and the back stack stays clean.
+- `RouteScrollRestoration` (`src/components/RouteScrollRestoration/`) saves the offset of
+  every history entry, disables the browser's own scroll restoration and puts the user back
+  where they were on Back/Forward. Late content (cached feeds, images, skeletons turning
+  into cards) is followed with retries and a `ResizeObserver`; an actual scroll or click
+  stops the corrections so the page never fights the user.
+- New pages open at the top, while in-page updates keep the current offset. Expanded
+  filmographies and the "Similar" grid are remembered for the session as well.
+- The For You feed itself lives in a module-level session (`useRecommendationFeed`) and is
+  reused for up to 30 minutes, so returning does not re-rank the cards the user was
+  looking at.
+
 ## Recommendations (For You)
 
 `/recommendations` is an endless, personalised feed. Everything runs in the browser on top of
