@@ -69,10 +69,13 @@ TMDB and the user's saved library; there is no server.
   about six months).
 - **Taste profile** (`profile.ts`, `features.ts`): genres, keywords, directors/cast, language,
   decade and kind, with shrinkage so one title cannot define a taste and damping for features
-  that are in almost everything. Title features are cached in `localStorage` for 14 days.
+  that are in almost everything. Actors are tracked separately from directors so recurring
+  faces in the saved and high-rated titles can drive their own recommendations. Title features
+  are cached in `localStorage` for 14 days.
 - **Candidates** (`candidates.ts`): TMDB "also liked" lists of the favourites, `/discover` by the
-  best genres, keywords and people, plus exploration (trending, neighbouring genres). Users with
-  fewer than 3 positive signals get a general quality mix instead.
+  best genres, keywords and people, one credits query per recurring actor, plus exploration
+  (trending, neighbouring genres). Users with fewer than 3 positive signals get a general
+  quality mix instead.
 - **Ranking** (`scoring.ts`, `engine.ts`): taste fit, seed support, Bayesian rating, popularity
   and freshness, lowered for titles already shown. Each page is picked with MMR for variety, and
   every 7th slot is an exploration pick. Watched, saved, rated and hidden titles never appear.

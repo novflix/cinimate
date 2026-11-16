@@ -9,6 +9,8 @@ export type TitleFeatures = {
   keywords: number[]
   /** Directors / creators first, then the top-billed cast. */
   people: number[]
+  /** The top-billed actors, kept separately so recurring actors can be spotted. */
+  cast: number[]
   language: string
   year: number
 }
@@ -26,10 +28,11 @@ type RawDetails = {
   created_by?: { id: number }[]
 }
 
-const STORAGE_KEY = 'cinimate:rec-features:v1'
+const STORAGE_KEY = 'cinimate:rec-features:v2'
 const KEYWORD_LIMIT = 15
 const DIRECTOR_LIMIT = 2
-const CAST_LIMIT = 4
+const CAST_LIMIT = 10
+const PEOPLE_CAST_LIMIT = 4
 const CONCURRENCY = 6
 
 type CacheEntry = { t: number; f: TitleFeatures }
@@ -94,7 +97,11 @@ function toFeatures(kind: MediaKind, data: RawDetails): TitleFeatures {
     kind,
     genres: (data.genres ?? []).map((genre) => genre.id),
     keywords: keywords.slice(0, KEYWORD_LIMIT).map((keyword) => keyword.id),
-    people: [...makers.slice(0, DIRECTOR_LIMIT), ...cast].map((person) => person.id),
+    people: [
+      ...makers.slice(0, DIRECTOR_LIMIT),
+      ...cast.slice(0, PEOPLE_CAST_LIMIT),
+    ].map((person) => person.id),
+    cast: cast.map((person) => person.id),
     language: data.original_language ?? '',
     year: Number(date.slice(0, 4)) || 0,
   }

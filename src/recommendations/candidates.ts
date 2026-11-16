@@ -7,14 +7,12 @@ import {
 } from '@/api/tmdb'
 import { titleKey } from '@/lib/library'
 import { REC } from './config'
-import { topFeatures, type TasteProfile } from './profile'
+import { favouriteActors, topFeatures, type TasteProfile } from './profile'
 import type { Candidate } from './scoring'
 
-/** One TMDB list that feeds the pool. Each call to `path(page)` gives the next page of it. */
+/** One TMDB source that feeds the pool. Each call to `fetchPage(page)` gives the next page of it. */
 export type Query = {
   id: string
-  path: (page: number) => string
-  /** `mixed` lists (trending) carry `media_type` on every item. */
   kind: MediaKind | 'mixed'
   role: 'seed' | 'discover' | 'explore' | 'base'
   /** Seed queries: how much the title they came from is liked. */
@@ -22,12 +20,62 @@ export type Query = {
   /** Discover queries built from keywords / people: how strong that taste is (0–1). */
   evidence?: number
   maxPages: number
+  fetchPage: (page: number) => Promise<QueryPage>
 }
 
 type TmdbPage = { results: TmdbTrendingItem[]; total_pages?: number }
+type TmdbCredit = TmdbTrendingItem & { character?: string }
+
+export type QueryPage = {
+  results: TmdbTrendingItem[]
+  /** The last page TMDB reports; single-response sources (person credits) have just one. */
+  totalPages: number
+}
 
 const tmdbKind = (kind: MediaKind) => (kind === 'movie' ? 'movie' : 'tv')
 const KINDS: MediaKind[] = ['movie', 'series']
+
+async function listPage(path: string): Promise<QueryPage> {
+  const response = await getJson<TmdbPage>(path)
+  return { results: response.results, totalPages: response.total_pages ?? 1 }
+}
+
+// "Self", "Himself (archive footage)" and the like: the actor plays no real role in the title.
+const SELF_ROLE = /^(self|himself|herself|themselves)\b/i
+const ARCHIVE_FOOTAGE = /archive footage/i
+
+/**
+ * An actor's whole filmography in one response. It covers movies and series alike, which the
+ * TV discover endpoint cannot do with `with_people`, so a recurring actor is followed this way.
+ */
+async function personCreditsPage(personId: number): Promise<QueryPage> {
+  const response = await getJson<{ cast?: TmdbCredit[] }>(
+    `/person/${personId}/combined_credits?language=en-US`,
+  )
+
+  const seen = new Set<string>()
+  const results: TmdbTrendingItem[] = []
+
+  for (const credit of response.cast ?? []) {
+    if (credit.media_type !== 'movie' && credit.media_type !== 'tv') continue
+
+    const role = credit.character?.trim() ?? ''
+    if (ARCHIVE_FOOTAGE.test(role)) continue
+    if (credit.media_type === 'tv' && SELF_ROLE.test(role)) continue
+
+    const key = `${credit.media_type}-${credit.id}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    results.push(credit)
+  }
+
+  return {
+    results: results
+      .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
+      .slice(0, REC.cast.creditLimit),
+    totalPages: 1,
+  }
+}
 
 // Discover queries only ask for titles with a real audience; the app-wide filters run after.
 // TMDB rejects a repeated parameter with a 400, so the default vote floor is added only when
@@ -49,14 +97,15 @@ export function buildPlan(profile: TasteProfile): Query[] {
       role: 'seed',
       seedWeight: weight,
       maxPages: REC.recommendationPages,
-      path: (page) =>
-        `/${tmdbKind(ref.kind)}/${ref.id}/recommendations?language=en-US&page=${page}`,
+      fetchPage: (page) =>
+        listPage(`/${tmdbKind(ref.kind)}/${ref.id}/recommendations?language=en-US&page=${page}`),
     })
   }
 
   const genres = topFeatures(profile.genres, null, 5)
   const keywords = topFeatures(profile.keywords, profile.keywordCounts, 3, 2)
   const people = topFeatures(profile.people, profile.peopleCounts, 3, 2)
+  const actors = favouriteActors(profile)
 
   const keywordEvidence = evidenceOf(profile.keywords, keywords)
   const peopleEvidence = evidenceOf(profile.people, people)
@@ -69,8 +118,14 @@ export function buildPlan(profile: TasteProfile): Query[] {
         kind,
         role: 'discover',
         maxPages: REC.maxPagesPerQuery,
-        path: (page) =>
-          discover(kind, `sort_by=popularity.desc&with_genres=${genres.slice(0, 2).join(',')}`, page),
+        fetchPage: (page) =>
+          listPage(
+            discover(
+              kind,
+              `sort_by=popularity.desc&with_genres=${genres.slice(0, 2).join(',')}`,
+              page,
+            ),
+          ),
       })
     }
 
@@ -80,11 +135,13 @@ export function buildPlan(profile: TasteProfile): Query[] {
         kind,
         role: 'discover',
         maxPages: REC.maxPagesPerQuery,
-        path: (page) =>
-          discover(
-            kind,
-            `sort_by=vote_average.desc&vote_count.gte=500&with_genres=${genres.slice(0, 3).join('|')}`,
-            page,
+        fetchPage: (page) =>
+          listPage(
+            discover(
+              kind,
+              `sort_by=vote_average.desc&vote_count.gte=500&with_genres=${genres.slice(0, 3).join('|')}`,
+              page,
+            ),
           ),
       })
     }
@@ -97,13 +154,15 @@ export function buildPlan(profile: TasteProfile): Query[] {
         role: 'discover',
         evidence: keywordEvidence,
         maxPages: REC.maxPagesPerQuery,
-        path: (page) =>
-          discover(kind, `sort_by=popularity.desc&with_keywords=${keywords.join('|')}`, page),
+        fetchPage: (page) =>
+          listPage(
+            discover(kind, `sort_by=popularity.desc&with_keywords=${keywords.join('|')}`, page),
+          ),
       })
     }
   }
 
-  // 4. Favourite directors and actors (TMDB only supports this for movies).
+  // 4. Favourite directors and actors (TMDB only supports `with_people` for movies).
   if (people.length > 0) {
     queries.push({
       id: 'people:movie',
@@ -111,11 +170,27 @@ export function buildPlan(profile: TasteProfile): Query[] {
       role: 'discover',
       evidence: peopleEvidence,
       maxPages: REC.maxPagesPerQuery,
-      path: (page) => discover('movie', `sort_by=popularity.desc&with_people=${people.join('|')}`, page),
+      fetchPage: (page) =>
+        listPage(
+          discover('movie', `sort_by=popularity.desc&with_people=${people.join('|')}`, page),
+        ),
     })
   }
 
-  // 5. Exploration: the week's trending titles and the next-best genres.
+  // 5. Actors who keep appearing in liked titles get one query each. Their credits cover both
+  //    movies and series, so a familiar face can pull a title in even when genres do not match.
+  for (const actor of actors) {
+    queries.push({
+      id: `actor:${actor}`,
+      kind: 'mixed',
+      role: 'discover',
+      evidence: actorEvidence(profile, actor),
+      maxPages: 1,
+      fetchPage: () => personCreditsPage(actor),
+    })
+  }
+
+  // 6. Exploration: the week's trending titles and the next-best genres.
   queries.push(trending())
 
   const adjacent = genres.slice(2, 5)
@@ -126,8 +201,8 @@ export function buildPlan(profile: TasteProfile): Query[] {
         kind,
         role: 'explore',
         maxPages: REC.maxPagesPerQuery,
-        path: (page) =>
-          discover(kind, `sort_by=popularity.desc&with_genres=${adjacent.join('|')}`, page),
+        fetchPage: (page) =>
+          listPage(discover(kind, `sort_by=popularity.desc&with_genres=${adjacent.join('|')}`, page)),
       })
     }
   }
@@ -145,15 +220,21 @@ export function buildColdPlan(): Query[] {
       kind,
       role: 'base',
       maxPages: REC.maxPagesPerQuery,
-      path: (page) =>
-        discover(kind, `sort_by=vote_average.desc&vote_count.gte=${kind === 'movie' ? 2000 : 800}`, page),
+      fetchPage: (page) =>
+        listPage(
+          discover(
+            kind,
+            `sort_by=vote_average.desc&vote_count.gte=${kind === 'movie' ? 2000 : 800}`,
+            page,
+          ),
+        ),
     })
     plan.push({
       id: `cold-pop:${kind}`,
       kind,
       role: 'base',
       maxPages: REC.maxPagesPerQuery,
-      path: (page) => discover(kind, 'sort_by=popularity.desc', page),
+      fetchPage: (page) => listPage(discover(kind, 'sort_by=popularity.desc', page)),
     })
   }
 
@@ -166,8 +247,16 @@ function trending(): Query {
     kind: 'mixed',
     role: 'explore',
     maxPages: REC.maxPagesPerQuery,
-    path: (page) => `/trending/all/week?language=en-US&page=${page}`,
+    fetchPage: (page) => listPage(`/trending/all/week?language=en-US&page=${page}`),
   }
+}
+
+/** How strongly a recurring actor points at their other titles (recurrence adds to affinity). */
+function actorEvidence(profile: TasteProfile, actor: number): number {
+  const affinity = profile.cast.get(actor) ?? 0
+  const count = profile.castCounts.get(actor) ?? 0
+
+  return Math.min(1, Math.max(0, affinity) * 2 + Math.min(count, 5) * 0.06)
 }
 
 function evidenceOf(affinity: Map<number, number>, ids: number[]): number {
@@ -182,7 +271,7 @@ export type PageResult = { candidates: Candidate[]; hasMorePages: boolean }
 
 /** Loads one page of a query and turns the titles that pass the app-wide quality gate into candidates. */
 export async function fetchQueryPage(query: Query, page: number): Promise<PageResult> {
-  const response = await getJson<TmdbPage>(query.path(page))
+  const response = await query.fetchPage(page)
 
   const candidates = applyFilters(response.results, gate).flatMap((raw) => {
     const kind = resolveKind(query, raw)
@@ -209,8 +298,10 @@ export async function fetchQueryPage(query: Query, page: number): Promise<PageRe
     return [candidate]
   })
 
-  const totalPages = response.total_pages ?? page
-  return { candidates, hasMorePages: page < Math.min(totalPages, query.maxPages) }
+  return {
+    candidates,
+    hasMorePages: page < Math.min(response.totalPages, query.maxPages),
+  }
 }
 
 function resolveKind(query: Query, raw: TmdbTrendingItem): MediaKind | null {

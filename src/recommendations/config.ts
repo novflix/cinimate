@@ -42,6 +42,16 @@ export const REC = {
     popularity: 0.1,
     freshness: 0.05,
   },
+
+  /** Actors the user keeps meeting in the titles they save and rate highly. */
+  cast: {
+    /** How many recurring actors get their own TMDB query. */
+    queryLimit: 3,
+    /** An actor has to appear in this many titles before it counts as a favourite. */
+    minTitles: 2,
+    /** At most this many credits are taken from one actor's filmography. */
+    creditLimit: 60,
+  },
   /** Bayesian rating: titles with few votes are pulled towards the global average. */
   bayesVotes: 300,
   bayesMean: 6.6,

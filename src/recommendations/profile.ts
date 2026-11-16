@@ -13,9 +13,12 @@ export type TasteProfile = {
   genres: Affinity
   keywords: Affinity
   people: Affinity
-  /** How many of the user's titles carry each keyword / person (one-offs are weak evidence). */
+  /** Actors only, kept separately from directors so recurring faces can drive their own queries. */
+  cast: Affinity
+  /** How many of the user's titles carry each keyword / person / actor (one-offs are weak evidence). */
   keywordCounts: Map<number, number>
   peopleCounts: Map<number, number>
+  castCounts: Map<number, number>
   languages: Map<string, number>
   decades: Map<number, number>
   kinds: Record<MediaKind, number>
@@ -61,6 +64,7 @@ export function buildProfile(
   const genres = accumulator<number>()
   const keywords = accumulator<number>()
   const people = accumulator<number>()
+  const cast = accumulator<number>()
   const languages = accumulator<string>()
   const decades = accumulator<number>()
   const kinds = accumulator<MediaKind>()
@@ -75,6 +79,7 @@ export function buildProfile(
     f.genres.forEach((id) => add(genres, id, weight))
     f.keywords.forEach((id) => add(keywords, id, weight))
     f.people.forEach((id) => add(people, id, weight))
+    f.cast.forEach((id) => add(cast, id, weight))
     if (f.language) add(languages, f.language, weight)
     if (f.year) add(decades, Math.floor(f.year / 10) * 10, weight)
     add(kinds, f.kind, weight)
@@ -92,8 +97,10 @@ export function buildProfile(
     genres: finish(genres, total),
     keywords: finish(keywords, total),
     people: finish(people, total),
+    cast: finish(cast, total),
     keywordCounts: keywords.count,
     peopleCounts: people.count,
+    castCounts: cast.count,
     languages: finish(languages, total),
     decades: finish(decades, total),
     kinds: { movie: kindAffinity.get('movie') ?? 0, series: kindAffinity.get('series') ?? 0 },
@@ -116,4 +123,24 @@ export function topFeatures(
 
   const solid = counts ? ranked.filter(([id]) => (counts.get(id) ?? 0) >= minCount) : ranked
   return (solid.length >= limit ? solid : ranked).slice(0, limit).map(([id]) => id)
+}
+
+/**
+ * The actors who keep appearing in the titles the user saved and rated highly. The count
+ * matters: an actor in four liked titles is a stronger signal than one in two, even when their
+ * average affinity is the same.
+ */
+export function favouriteActors(profile: TasteProfile): number[] {
+  const ranked: { id: number; score: number }[] = []
+
+  for (const [id, affinity] of profile.cast) {
+    const count = profile.castCounts.get(id) ?? 0
+    if (affinity <= 0.05 || count < REC.cast.minTitles) continue
+    ranked.push({ id, score: affinity * Math.log2(1 + count) })
+  }
+
+  return ranked
+    .sort((a, b) => b.score - a.score)
+    .slice(0, REC.cast.queryLimit)
+    .map(({ id }) => id)
 }
