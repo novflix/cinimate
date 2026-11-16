@@ -201,7 +201,7 @@
        without scrolling even on short laptops. */
     padding: clamp(24px, 3.4vh, 40px) clamp(32px, 3vw, 40px) clamp(20px, 3vh, 32px);
     border: 1px solid rgb(245 245 242 / 10%);
-    border-radius: 28px;
+    border-radius: var(--r-2xl);
     background-color: rgb(10 10 10 / 72%);
     backdrop-filter: blur(24px) saturate(140%);
     box-shadow:

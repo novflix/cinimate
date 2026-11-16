@@ -27,7 +27,7 @@
   gap: 22px;
   padding: clamp(20px, 2.4vw, 28px);
   border: 1px solid var(--border);
-  border-radius: 22px;
+  border-radius: var(--r-2xl);
   background-color: var(--surface);
 }
 

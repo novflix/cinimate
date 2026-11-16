@@ -74,7 +74,7 @@
 .profile-tab[aria-selected='true'],
 .profile-tab[aria-selected='true']:hover {
   background-color: transparent;
-  color: #0c1002;
+  color: var(--on-accent);
 }
 
 .profile-tab:focus-visible {
@@ -101,7 +101,7 @@
 
 .profile-tab[aria-selected='true'] .profile-tab__count {
   background-color: rgb(12 16 2 / 14%);
-  color: #0c1002;
+  color: var(--on-accent);
 }
 
 @media (max-width: 768px) {

@@ -30,7 +30,7 @@
   align-self: start;
   overflow: hidden;
   aspect-ratio: 11 / 15;
-  border-radius: 18px;
+  border-radius: var(--r-xl);
   background-color: var(--surface);
 }
 
@@ -214,7 +214,7 @@
 }
 
 .person-grid .media-card__image-wrap {
-  border-radius: 12px;
+  border-radius: var(--r-md);
 }
 
 .person-filmography__more {
@@ -267,19 +267,19 @@
 
 /* Loading skeleton: the same grid areas as the hero, so nothing jumps when the data arrives. */
 .person-skeleton__photo {
-  border-radius: 18px;
+  border-radius: var(--r-xl);
 }
 
 .person-skeleton__name {
   width: 70%;
   height: 26px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
 }
 
 .person-skeleton__line {
   width: 92%;
   height: 13px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
 }
 
 .person-skeleton__line--short {
@@ -455,7 +455,7 @@
   }
 
   .person-grid .media-card__image-wrap {
-    border-radius: 14px;
+    border-radius: var(--r-lg);
   }
 
   .person-filmography__more-button {

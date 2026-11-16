@@ -9,7 +9,7 @@
   overflow: hidden;
   isolation: isolate;
   border: 1px solid var(--border);
-  border-radius: 28px;
+  border-radius: var(--r-2xl);
   background:
     linear-gradient(160deg, rgb(255 255 255 / 5%) 0%, rgb(255 255 255 / 1.5%) 60%),
     var(--surface);
@@ -25,7 +25,7 @@
   width: 420px;
   height: 320px;
   pointer-events: none;
-  background: radial-gradient(50% 50% at 50% 50%, rgb(194 254 31 / 16%), transparent 70%);
+  background: radial-gradient(50% 50% at 50% 50%, rgb(194 254 31 / 8%), transparent 70%);
   filter: blur(16px);
 }
 
@@ -123,7 +123,7 @@
   gap: 12px;
   padding: 14px 16px;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: var(--r-xl);
   background-color: rgb(255 255 255 / 3%);
   color: var(--muted);
   font-size: 14px;
@@ -148,7 +148,7 @@
 
 @media (max-width: 768px) {
   .taste-setup {
-    border-radius: 24px;
+    border-radius: var(--r-2xl);
   }
 
   .taste-setup__steps {

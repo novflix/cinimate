@@ -5,6 +5,9 @@ import { MediaCardSkeleton } from '@/components/Skeleton/Skeleton'
 import { gridStyle, useGridLayout } from '@/hooks/useCardGridLayout'
 import './ForYouFeed.css'
 
+/** Two cards per row on phones, so the action buttons on each card stay easy to hit. */
+const FEED_MOBILE_COLUMNS = 2
+
 /** Keep in sync with the `for-you-out` animation in the CSS. */
 const LEAVE_MS = 260
 /** How long the remaining cards take to glide into the freed place. */
@@ -112,7 +115,7 @@ function ForYouFeed({
 }: ForYouFeedProps) {
   const listRef = useRef<HTMLUListElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
-  const { columns } = useGridLayout(listRef)
+  const { columns } = useGridLayout(listRef, FEED_MOBILE_COLUMNS)
 
   // Hidden cards that have finished fading out and are removed from the grid. Cards hidden
   // before the user left are dropped straight away instead of fading out again on return.
@@ -237,7 +240,7 @@ function ForYouFeed({
 
 export function ForYouSkeleton() {
   const ref = useRef<HTMLUListElement>(null)
-  const { columns } = useGridLayout(ref)
+  const { columns } = useGridLayout(ref, FEED_MOBILE_COLUMNS)
 
   return (
     <ul

@@ -2,7 +2,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
   min-width: 0;
 }
@@ -11,8 +11,10 @@
   position: relative;
   overflow: hidden;
   aspect-ratio: 2 / 3;
-  border-radius: 14px;
+  border-radius: var(--r-lg);
   background-color: var(--surface);
+  outline: 1px solid rgb(255 255 255 / 7%);
+  outline-offset: -1px;
 }
 
 /* Placeholder shimmer until the poster bitmap is ready; SmartImage fades the poster over it. */
@@ -47,7 +49,7 @@
 }
 
 .media-card:hover .media-card__image {
-  transform: scale(1.04);
+  transform: scale(1.03);
 }
 
 /* Shade so the icon buttons stay readable over bright frames. */
@@ -126,11 +128,11 @@
 .media-card__action--active {
   border-color: transparent;
   background-color: var(--accent);
-  color: #0c1002;
+  color: var(--on-accent);
 }
 
 .media-card__action--active:hover {
-  background-color: #cdff3f;
+  background-color: var(--accent-hover);
 }
 
 .media-card__action:focus-visible {
@@ -174,8 +176,9 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: -4px;
+  margin-top: -6px;
   font-size: 13px;
+  font-variant-numeric: tabular-nums;
   font-weight: 500;
 }
 
@@ -279,7 +282,7 @@
 
 .media-card__remove:hover {
   border-color: transparent;
-  background-color: #ff4d4f;
+  background-color: var(--danger);
   color: #fff;
 }
 
@@ -348,7 +351,7 @@
 
 .media-card__dismiss:hover {
   border-color: transparent;
-  background-color: #ffa93d;
+  background-color: var(--warn);
   color: #1a1000;
 }
 

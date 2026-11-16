@@ -12,7 +12,7 @@
   position: relative;
   aspect-ratio: 2 / 3;
   overflow: hidden;
-  border-radius: 14px;
+  border-radius: var(--r-lg);
   background-color: var(--surface);
 }
 
@@ -106,6 +106,6 @@
   }
 
   .person-card__role {
-    font-size: 10.5px;
+    font-size: 11px;
   }
 }

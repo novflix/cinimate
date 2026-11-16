@@ -23,7 +23,7 @@
   width: min(100%, 380px);
   padding: 20px 20px 14px;
   border: 1px solid var(--border);
-  border-radius: 28px;
+  border-radius: var(--r-2xl);
   background:
     radial-gradient(
       120% 70% at 50% 0%,
@@ -173,7 +173,7 @@
   grid-template-columns: repeat(10, minmax(0, 1fr));
   gap: 4px;
   margin-top: 16px;
-  border-radius: 12px;
+  border-radius: var(--r-md);
   cursor: pointer;
   user-select: none;
   touch-action: pan-y;
@@ -192,7 +192,7 @@
   display: grid;
   place-items: center;
   height: 44px;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background-color: rgb(245 245 242 / 6%);
   color: rgb(245 245 242 / 45%);
   font-size: 13px;
@@ -212,7 +212,7 @@
 
 .rating-scale__step--current {
   background-color: var(--rating-color);
-  color: #0c1002;
+  color: var(--on-accent);
   transform: translateY(-3px);
 }
 
@@ -227,7 +227,7 @@
   border: 0;
   border-radius: 999px;
   background-color: var(--rating-color);
-  color: #0c1002;
+  color: var(--on-accent);
   font: inherit;
   font-size: 16px;
   font-weight: 700;

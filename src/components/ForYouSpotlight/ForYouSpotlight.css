@@ -1,0 +1,251 @@
+.spotlight {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: clamp(300px, 28vw, 420px);
+  margin-bottom: clamp(28px, 3vw, 44px);
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: var(--r-2xl);
+  background-color: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  animation: content-reveal 420ms var(--ease-out) both;
+}
+
+.spotlight__art {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+}
+
+.spotlight__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+}
+
+/* No backdrop: the poster is blurred into a colour field instead of being stretched. */
+.spotlight__image--poster {
+  transform: scale(1.3);
+  filter: blur(36px) saturate(1.1);
+  opacity: 0.55;
+}
+
+.spotlight__shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(0deg, rgb(1 1 1 / 88%) 0%, rgb(1 1 1 / 40%) 45%, transparent 75%),
+    linear-gradient(90deg, rgb(1 1 1 / 70%) 0%, rgb(1 1 1 / 20%) 55%, transparent 80%);
+}
+
+.spotlight__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  max-width: 640px;
+  padding: clamp(22px, 3vw, 44px);
+}
+
+.spotlight__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.spotlight__title {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: clamp(30px, 3.4vw, 52px);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  padding-bottom: 0.14em;
+  margin-bottom: -0.14em;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+/* The whole banner opens the title; the buttons sit above it. */
+.spotlight__link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.spotlight__link::after {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  content: '';
+}
+
+.spotlight__link:focus-visible {
+  outline: none;
+}
+
+.spotlight:has(.spotlight__link:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.spotlight__meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: rgb(245 245 242 / 72%);
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.spotlight__meta > * + *::before {
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  margin-right: 14px;
+  vertical-align: middle;
+  border-radius: 50%;
+  background-color: currentcolor;
+  opacity: 0.5;
+  content: '';
+}
+
+.spotlight__rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.spotlight__actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.spotlight__button,
+.spotlight__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 46px;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: var(--r-lg);
+  background-color: rgb(255 255 255 / 10%);
+  color: var(--fg);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease,
+    transform 200ms var(--ease-spring);
+}
+
+.spotlight__button {
+  padding: 0 20px;
+}
+
+.spotlight__icon {
+  width: 46px;
+  padding: 0;
+}
+
+.spotlight__button:hover,
+.spotlight__icon:hover {
+  background-color: rgb(255 255 255 / 18%);
+}
+
+.spotlight__button--primary {
+  border-color: transparent;
+  background-color: var(--accent);
+  color: var(--on-accent);
+  backdrop-filter: none;
+}
+
+.spotlight__button--primary:hover {
+  background-color: var(--accent-hover);
+}
+
+/* Already saved: the primary action turns into a quiet state, not a second call to action. */
+.spotlight__button--primary.is-on {
+  border-color: rgb(194 254 31 / 40%);
+  background-color: rgb(194 254 31 / 14%);
+  color: var(--accent);
+}
+
+.spotlight__button--primary.is-on:hover {
+  background-color: rgb(194 254 31 / 22%);
+}
+
+.spotlight__button.is-on:not(.spotlight__button--primary) {
+  border-color: rgb(194 254 31 / 40%);
+  color: var(--accent);
+}
+
+.spotlight__button:active,
+.spotlight__icon:active {
+  transform: scale(0.97);
+}
+
+@media (max-width: 768px) {
+  .spotlight {
+    min-height: 300px;
+    margin-bottom: 24px;
+    border-radius: var(--r-xl);
+  }
+
+  .spotlight__body {
+    gap: 10px;
+    padding: 20px 18px;
+  }
+
+  .spotlight__title {
+    font-size: clamp(26px, 7.4vw, 34px);
+  }
+
+  .spotlight__actions {
+    width: 100%;
+  }
+
+  .spotlight__button {
+    flex: 1;
+    height: 44px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  /* Secondary actions shrink to icons; only the main one keeps its label. */
+  .spotlight__button:not(.spotlight__button--primary) {
+    flex: 0 0 44px;
+    width: 44px;
+    padding: 0;
+  }
+
+  .spotlight__button-text {
+    display: none;
+  }
+
+  .spotlight__icon {
+    flex-shrink: 0;
+    height: 44px;
+    width: 44px;
+  }
+}

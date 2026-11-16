@@ -16,9 +16,8 @@ type ProfileHeaderProps = {
 function ProfileHeader({ name, subtitle, corner, children }: ProfileHeaderProps) {
   return (
     <header className="profile-header">
-      <div className="profile-header__banner">
-        {corner && <div className="profile-header__corner">{corner}</div>}
-      </div>
+      <div className="profile-header__banner" aria-hidden="true" />
+      {corner && <div className="profile-header__corner">{corner}</div>}
 
       <div className="profile-header__body">
         <div className="profile-header__avatar">

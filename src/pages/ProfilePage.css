@@ -43,29 +43,40 @@
 .profile-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
   margin: 0;
-  text-align: center;
+  text-align: left;
 }
 
 .profile-stats__item {
   display: flex;
   flex-direction: column-reverse;
   gap: 2px;
+  padding-inline: 12px;
+  border-left: 1px solid var(--border);
+}
+
+.profile-stats__item:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.profile-stats__item--desktop {
+  display: none;
 }
 
 .profile-stats__value {
   margin: 0;
-  color: var(--accent);
-  font-size: 19px;
-  font-weight: 700;
+  color: var(--fg);
+  font-size: 20px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
   line-height: 1.2;
 }
 
 .profile-stats__label {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -81,21 +92,33 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  height: 52px;
-  padding: 0 28px;
-  border: 0;
+  order: 2;
+  height: 44px;
+  padding: 0 18px 0 16px;
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  background-color: var(--accent);
-  color: #0c1002;
+  background-color: transparent;
+  color: var(--muted);
   font: inherit;
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: -0.005em;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.profile__toolbar > .profile-tabs {
+  order: 1;
+}
+
+.profile__roulette-soon {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background-color: rgb(255 255 255 / 8%);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .profile__roulette:disabled {
-  background-color: rgb(255 255 255 / 8%);
-  color: var(--muted);
   cursor: not-allowed;
 }
 
@@ -161,12 +184,12 @@
   gap: 6px;
   padding: 56px 16px;
   border: 1px dashed rgb(255 255 255 / 12%);
-  border-radius: 22px;
+  border-radius: var(--r-2xl);
   text-align: center;
 }
 
 .profile__empty-title {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
 }
 
@@ -201,23 +224,45 @@
   outline-offset: 3px;
 }
 
-/* Desktop: stats sit beside the nickname, tabs on the left and the roulette on the right. */
+/* Desktop: stats are a ruled strip, tabs sit on the left and a quiet roulette on the right. */
 @media (min-width: 769px) {
   .profile {
-    gap: clamp(22px, 2.4vw, 34px);
+    gap: clamp(24px, 2.4vw, 36px);
   }
 
   .profile-stats {
     display: flex;
-    gap: clamp(28px, 3.4vw, 56px);
+    gap: 0;
+    text-align: left;
+  }
+
+  .profile-stats__item,
+  .profile-stats__item--desktop {
+    display: flex;
+    min-width: 92px;
+    padding-inline: clamp(18px, 2vw, 32px);
+    border-left: 1px solid var(--border);
+    gap: 4px;
+  }
+
+  .profile-stats__item:first-child {
+    border-left: 0;
   }
 
   .profile-stats__value {
-    font-size: clamp(22px, 1.8vw, 28px);
+    color: var(--fg);
+    font-size: clamp(24px, 2vw, 30px);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .profile-stats__item--desktop .profile-stats__value {
+    color: var(--accent);
   }
 
   .profile-stats__label {
-    font-size: 14px;
+    font-size: 13px;
+    white-space: nowrap;
   }
 
   .profile__toolbar {
@@ -225,6 +270,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
   }
 
   .profile__toolbar > .profile-tabs {
@@ -234,7 +281,21 @@
   .profile__roulette {
     order: 2;
     flex-shrink: 0;
-    min-width: 240px;
+    height: 44px;
+    padding: 0 18px 0 16px;
+    border: 1px solid var(--border-strong);
+    background-color: transparent;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .profile__roulette:disabled {
+    background-color: transparent;
+  }
+
+  .profile-grid {
+    grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+    gap: 36px 20px;
   }
 }
 
@@ -274,7 +335,7 @@
   }
 
   .profile-grid .media-card__image-wrap {
-    border-radius: 12px;
+    border-radius: var(--r-md);
   }
 }
 

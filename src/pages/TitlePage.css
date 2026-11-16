@@ -17,14 +17,14 @@
 .title-page-skeleton__meta {
   width: 42%;
   height: 14px;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
 }
 
 .title-page-skeleton__line {
   width: 92%;
   height: 13px;
   margin-top: 16px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
 }
 
 .title-page-skeleton__line--short {
@@ -34,14 +34,14 @@
 .title-page-skeleton__fact-value {
   width: 56px;
   height: 17px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
 }
 
 .title-page-skeleton__fact-label {
   width: 92px;
   height: 12px;
   margin-top: 8px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
 }
 
 .title-page__summary {
@@ -109,7 +109,7 @@
 
 .title-page__fact dt {
   color: var(--accent);
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1.25;
 }

@@ -49,7 +49,7 @@
   font: inherit;
   font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
   white-space: nowrap;
   cursor: pointer;
   transition:
@@ -67,7 +67,7 @@
 .category-tab[aria-selected='true'] {
   border-color: transparent;
   background-color: transparent;
-  color: #0c1002;
+  color: var(--on-accent);
 }
 
 .category-tab[aria-selected='true']:hover {

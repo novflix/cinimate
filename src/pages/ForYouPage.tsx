@@ -51,10 +51,10 @@ function ForYouPage() {
           <h1 className="for-you__title">For You</h1>
           <p className="for-you__hint">
             {needsSetup
-              ? 'Tell us what you like and this page turns into your own feed.'
+              ? 'Add a few titles you like and this becomes your feed.'
               : cold
-                ? 'Rate a few titles you have watched and this feed will start to match your taste.'
-                : 'Picked from what you rate, watch and save. Hide what is not for you.'}
+                ? 'Rate a few titles to teach the feed your taste.'
+                : 'Picked from what you rate, watch and save.'}
           </p>
         </div>
 
@@ -64,10 +64,10 @@ function ForYouPage() {
             type="button"
             onClick={refresh}
             disabled={status === 'loading'}
-            aria-label="Refresh recommendations"
-            title="Refresh"
+            aria-label="Refresh picks"
           >
             <RestartIcon size={18} aria-hidden="true" />
+            <span className="for-you__refresh-text">Refresh picks</span>
           </button>
         )}
       </header>

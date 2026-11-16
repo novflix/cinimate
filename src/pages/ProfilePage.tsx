@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useLibrary } from '@/hooks/useLibrary'
 import { useTitleCards } from '@/hooks/useTitleCards'
 import { titleKey, type TitleRef } from '@/lib/library'
+import { formatRating } from '@/api/tmdb'
 import { homePath } from '@/navigation'
 import './ProfilePage.css'
 
@@ -93,7 +94,7 @@ function ProfileGridSkeleton() {
 
 function ProfilePage() {
   const { user } = useAuth()
-  const { ready, watchlist, watched, stats } = useLibrary()
+  const { ready, watchlist, watched, stats, library } = useLibrary()
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab: TabId = searchParams.get('tab') === 'watched' ? 'watched' : 'watchlist'
   // The panel slides in from the side of the tab that was pressed.
@@ -106,11 +107,19 @@ function ProfilePage() {
     { id: 'watched', label: 'Watched', count: ready ? watched.length : null },
   ]
 
+  const scores = Object.values(library.ratings)
+  const average = scores.length > 0 ? scores.reduce((sum, value) => sum + value, 0) / scores.length : null
+
   const statItems = [
-    { label: 'Watched', value: ready ? stats.watched : '–' },
-    { label: 'Queued', value: ready ? stats.queued : '–' },
-    { label: 'Movies', value: ready ? stats.movies : '–' },
-    { label: 'Series', value: ready ? stats.series : '–' },
+    { label: 'Watched', value: ready ? stats.watched : '–', desktopOnly: false },
+    { label: 'Queued', value: ready ? stats.queued : '–', desktopOnly: false },
+    { label: 'Movies', value: ready ? stats.movies : '–', desktopOnly: false },
+    { label: 'Series', value: ready ? stats.series : '–', desktopOnly: false },
+    {
+      label: 'Avg. rating',
+      value: ready && average !== null ? formatRating(average) : '–',
+      desktopOnly: true,
+    },
   ]
 
   const titles = activeTab === 'watchlist' ? watchlist : watched
@@ -129,7 +138,10 @@ function ProfilePage() {
       >
         <dl className="profile-stats">
           {statItems.map((stat) => (
-            <div className="profile-stats__item" key={stat.label}>
+            <div
+              className={`profile-stats__item${stat.desktopOnly ? ' profile-stats__item--desktop' : ''}`}
+              key={stat.label}
+            >
               <dt className="profile-stats__label">{stat.label}</dt>
               <dd className="profile-stats__value">{stat.value}</dd>
             </div>
@@ -140,8 +152,9 @@ function ProfilePage() {
       <div className="profile__toolbar">
         {/* Placeholder: the roulette is built later, so the button stays disabled for now. */}
         <button type="button" className="profile__roulette" disabled title="Coming soon">
-          <ShuffleIcon size={22} aria-hidden="true" />
+          <ShuffleIcon size={20} aria-hidden="true" />
           What to watch?
+          <span className="profile__roulette-soon">Soon</span>
         </button>
 
         <ProfileTabs

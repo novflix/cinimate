@@ -7,7 +7,7 @@
   margin: clamp(20px, 2.4vw, 36px) auto 0;
   overflow: hidden;
   isolation: isolate;
-  border-radius: 20px;
+  border-radius: var(--r-xl);
   background-color: var(--bg);
   /* Vertical page scrolling stays native; horizontal gestures reach the swipe handler. */
   touch-action: pan-y;
@@ -79,13 +79,13 @@
 
 .hero__badge {
   padding: 5px 10px;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   background-color: var(--accent);
-  color: #0c1002;
+  color: var(--on-accent);
   font-size: 11px;
   font-weight: 700;
   line-height: 1.2;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -209,7 +209,7 @@
   height: 54px;
   padding: 0 28px;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: var(--r-lg);
   font: inherit;
   font-size: 15px;
   font-weight: 600;
@@ -224,13 +224,11 @@
 
 .hero__button--primary {
   background-color: var(--accent);
-  color: #0c1002;
-  box-shadow: 0 8px 24px rgb(194 254 31 / 18%);
+  color: var(--on-accent);
 }
 
 .hero__button--primary:hover {
-  background-color: #cdff3f;
-  box-shadow: 0 10px 28px rgb(194 254 31 / 26%);
+  background-color: var(--accent-hover);
 }
 
 .hero__button--secondary {
@@ -317,7 +315,6 @@
 .hero__dot--active {
   width: 24px;
   background-color: var(--accent);
-  box-shadow: 0 0 12px rgb(194 254 31 / 45%);
 }
 
 .hero__dot:focus-visible {

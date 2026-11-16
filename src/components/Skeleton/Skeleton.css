@@ -9,20 +9,20 @@
 .media-card-skeleton__poster {
   width: 100%;
   aspect-ratio: 2 / 3;
-  border-radius: 14px;
+  border-radius: var(--r-lg);
 }
 
 .media-card-skeleton__title {
   width: 76%;
   height: 14px;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
 }
 
 .media-card-skeleton__meta {
   width: 42%;
   height: 11px;
   margin-top: -4px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
 }
 
 .media-rail--skeleton,
@@ -33,7 +33,7 @@
 .media-rail-skeleton__heading {
   width: 150px;
   height: 22px;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
 }
 
 .media-rail-skeleton__track {

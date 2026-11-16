@@ -53,7 +53,7 @@
   max-width: 230px;
   padding: 12px 16px;
   border: 1px solid rgb(245 245 242 / 14%);
-  border-radius: 16px;
+  border-radius: var(--r-lg);
   background-color: rgb(16 17 14 / 55%);
   backdrop-filter: blur(16px);
   box-shadow: 0 16px 40px rgb(0 0 0 / 40%);
@@ -95,13 +95,11 @@
   36%,
   100% {
     color: var(--fg);
-    text-shadow: none;
   }
 
   8%,
   28% {
     color: var(--accent);
-    text-shadow: 0 0 32px rgb(194 254 31 / 45%);
   }
 }
 

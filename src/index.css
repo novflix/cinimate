@@ -34,9 +34,27 @@
   --bg: #010101;
   --surface: #0c0d0a;
   --fg: #f5f5f2;
-  --muted: rgb(245 245 242 / 55%);
+  --surface-2: #14150f;
+  --muted: rgb(245 245 242 / 62%);
+  --subtle: rgb(245 245 242 / 42%);
   --border: rgb(245 245 242 / 9%);
+  --border-strong: rgb(245 245 242 / 16%);
   --accent: #c2fe1f;
+  --accent-hover: #d2ff4d;
+  --on-accent: #0c1002;
+  --danger: #ff5a5f;
+  --warn: #ffa93d;
+
+  /* Radius scale: control / card / panel / sheet */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
+  --r-2xl: 28px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --font-sans: 'Switzer', system-ui, 'Segoe UI', Roboto, sans-serif;
 
   /* Shared width for page content (hero, category tabs, rows) */
@@ -81,6 +99,35 @@ h2,
 h3,
 p {
   margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* Numbers (ratings, years, countdowns) align in columns */
+body {
+  font-variant-numeric: lining-nums;
+}
+
+/* One focus ring for everything that doesn't define its own */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Quiet, thin scrollbars on desktop */
+@media (hover: hover) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(245 245 242 / 18%) transparent;
+  }
 }
 
 a {
