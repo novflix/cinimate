@@ -1,5 +1,9 @@
 .for-you-feed__item {
   min-width: 0;
+}
+
+/* Only cards that appear while the feed is open slide in; a restored feed must not move at all. */
+.for-you-feed__item--entering {
   animation: for-you-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -30,7 +34,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .for-you-feed__item,
+  .for-you-feed__item--entering,
   .for-you-feed__item--leaving {
     animation: none;
   }

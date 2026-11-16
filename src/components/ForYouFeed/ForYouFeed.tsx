@@ -16,6 +16,8 @@ type FeedCardProps = {
   item: PopularMediaItem
   priority: boolean
   dismissed: boolean
+  /** False for cards that were already on screen when the feed was restored. */
+  entering: boolean
   onDismiss: (item: PopularMediaItem) => void
   onSeen: (item: PopularMediaItem) => void
   /** Called once the fade-out of a hidden card is over, so the feed can close the gap. */
@@ -26,7 +28,16 @@ type FeedCardProps = {
 const keyOf = (item: PopularMediaItem) => `${item.kind}-${item.id}`
 
 /** A card that fades out when hidden; the feed then removes it and the others glide into place. */
-function FeedCard({ item, priority, dismissed, onDismiss, onSeen, onLeft, register }: FeedCardProps) {
+function FeedCard({
+  item,
+  priority,
+  dismissed,
+  entering,
+  onDismiss,
+  onSeen,
+  onLeft,
+  register,
+}: FeedCardProps) {
   const ref = useRef<HTMLLIElement | null>(null)
   const seen = useRef(false)
   const key = keyOf(item)
@@ -68,7 +79,9 @@ function FeedCard({ item, priority, dismissed, onDismiss, onSeen, onLeft, regist
   return (
     <li
       ref={setNode}
-      className={`for-you-feed__item${dismissed ? ' for-you-feed__item--leaving' : ''}`}
+      className={`for-you-feed__item${entering ? ' for-you-feed__item--entering' : ''}${
+        dismissed ? ' for-you-feed__item--leaving' : ''
+      }`}
     >
       <MediaCard item={item} priority={priority} onDismiss={() => onDismiss(item)} />
     </li>
@@ -101,8 +114,15 @@ function ForYouFeed({
   const sentinelRef = useRef<HTMLDivElement>(null)
   const { columns } = useGridLayout(listRef)
 
-  // Hidden cards that have finished fading out and are removed from the grid.
-  const [gone, setGone] = useState<ReadonlySet<string>>(new Set())
+  // Hidden cards that have finished fading out and are removed from the grid. Cards hidden
+  // before the user left are dropped straight away instead of fading out again on return.
+  const [gone, setGone] = useState<ReadonlySet<string>>(
+    () => new Set(items.filter(isDismissed).map(keyOf)),
+  )
+
+  // Cards that were already in the feed when it mounted were on screen before the user left.
+  // Replaying the entrance animation for them on Back would look like the page scrolled up.
+  const [knownKeys] = useState(() => new Set(items.map(keyOf)))
 
   const dismissedKeys = new Set(items.filter(isDismissed).map(keyOf))
   // Undo brings a card back: forget the removal during render, no extra effect pass needed.
@@ -184,18 +204,23 @@ function ForYouFeed({
     <>
       <ul ref={listRef} className="card-grid" style={gridStyle(columns)} aria-label="Recommended for you">
         {columns > 0 &&
-          visible.map((item, index) => (
-            <FeedCard
-              key={keyOf(item)}
-              item={item}
-              priority={index < columns}
-              dismissed={isDismissed(item)}
-              onDismiss={onDismiss}
-              onSeen={onSeen}
-              onLeft={handleLeft}
-              register={register}
-            />
-          ))}
+          visible.map((item, index) => {
+            const key = keyOf(item)
+
+            return (
+              <FeedCard
+                key={key}
+                item={item}
+                priority={index < columns}
+                dismissed={isDismissed(item)}
+                entering={!knownKeys.has(key)}
+                onDismiss={onDismiss}
+                onSeen={onSeen}
+                onLeft={handleLeft}
+                register={register}
+              />
+            )
+          })}
 
         {loadingMore &&
           Array.from({ length: columns * 2 }, (_, index) => (
